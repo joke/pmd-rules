@@ -195,23 +195,134 @@ for which the annotation would be nonsense.
 Note that a package-private method is stubbable only from a test in the **same package and the same
 classloader**. That holds for a standard Gradle layout and fails under JPMS with a sealed module.
 
-### The three rules cascade
+### AvoidLambdaBlockBodies
 
-They are designed to fire one at a time rather than all at once, so each violation has a single
-obvious fix:
+Reports a lambda whose body is a block. Logic belongs in something with a name — a lambda block body
+is anonymous by construction, so no test can call it, no caller can stub it, and its branches are
+reachable only through the pipeline that encloses it.
+
+**A method reference is not required.** This is the part to read twice, because the intuitive reading
+would make the rule close to unusable: a lambda that closes over a local variable cannot become a
+method reference at all. Any non-block body satisfies the rule, so such a lambda stays a lambda and
+simply delegates:
 
 ```java
-private static boolean check() { … }   // StaticMethodsModifyStaticState: drop static
-private boolean check() { … }          // AvoidPrivateAndProtectedMethods: widen to package-private
-boolean check() { … }                  // UseVisibleForTestingAnnotation: add @VisibleForTesting
+items.forEach(item -> {                     // reported
+    validate(item, context);
+    save(item, context);
+});
 
-@VisibleForTesting
-boolean check() { … }                  // clean
+items.forEach(item -> process(item, context));   // fine — still a lambda, just not a block
+items.forEach(this::save);                       // fine — no body at all
+
+map(x -> { return x + 1; });                // reported: converts to an expression
+map(x -> { save(x); });                     // reported: so does this
+map(x -> x + 1);                            // fine
+Runnable task = () -> { };                  // fine: nothing to extract
 ```
 
+An empty block is exempt — `() -> { }` has nothing to extract, and a violation nobody can act on is
+worse than one that is missed. A block containing only a comment is exempt for the same reason: a
+comment is not a statement.
+
+Logic inside an *expression* body is deliberately not reported:
+
+```java
+map(x -> x > 0 ? positive(x) : negative(x));                  // not reported — two branches
+map(x -> x.getA().getB().stream().filter(…).count());         // not reported — a long chain
+```
+
+Block-versus-expression is a syntactic proxy for "logic hiding in an anonymous place". It is a good
+proxy and a cheap one to determine, and it is the start rather than the whole answer.
+
+The rule declares `minimumLanguageVersion="8"`, since lambdas do not exist before Java 8.
+
+#### The one conflict: a block lambda in a static field initializer
+
+Extracting it produces a method that must be `static` — a static initializer calls it — and
+`StaticMethodsModifyStaticState` then reports that method. No form satisfies both rules, so
+`@SuppressWarnings` is available:
+
+```java
+@SuppressWarnings("PMD.StaticMethodsModifyStaticState")
+static String makeGreeting() { … }
+```
+
+**Usually there is a better fix: drop `static` from the field.** The shape that produces these in
+bulk is the static dispatch table, where every handler is forced static and every one is a violation:
+
+```java
+// one suppression per handler, and another on every handler added
+private static final Map<String, Handler> HANDLERS = Map.of(
+        "create", Example::handleCreate,
+        "delete", Example::handleDelete);
+
+// no suppressions at all — the handlers are instance methods now
+private final Map<String, Handler> handlers = Map.of(
+        "create", this::handleCreate,
+        "delete", this::handleDelete);
+```
+
+### AvoidAnonymousClasses
+
+Reports an anonymous class whose body is not empty. Its logic has no name: nothing can instantiate
+it, nothing can stub it. It is the less testable of the two anonymous forms — unlike a lambda it can
+declare several methods and carry its own fields.
+
+```java
+return new Runnable() {                     // reported
+    @Override
+    public void run() { doTheWork(); }
+};
+
+return new Worker();                        // fine — a named class
+```
+
+**The two rules ship together because each is the other's bypass.** A ban on lambda block bodies
+alone is escaped in one edit by rewriting the lambda as an anonymous class, and every other rule here
+waves that through: it is not static, its method is `public` and `@Override`, and it is not a lambda.
+The escape would land you on the *less* testable construct.
+
+Two exemptions, both because the alternative is a violation nobody can act on:
+
+```java
+new TypeToken<List<String>>() { }           // not reported: the empty body IS the mechanism
+
+enum Op {
+    PLUS { int apply(int a, int b) { return a + b; } },   // not reported: an enum constant body
+    MINUS { int apply(int a, int b) { return a - b; } };
+}
+```
+
+PMD models an enum constant body as an anonymous class, so without that exemption the rule would
+report every strategy enum — which has no anonymous-free rewrite that keeps the enum. An anonymous
+class declared inside a method *of* an enum is still reported; only the constant's own body is
+exempt.
+
+### The rules cascade
+
+They are designed to fire one at a time rather than all at once, so each violation has a single
+obvious fix. The full chain spans this ruleset and PMD's own:
+
+```java
+items.forEach(item -> { validate(item); save(item); });  // AvoidLambdaBlockBodies: extract the body
+items.forEach(item -> process(item));                    // LambdaCanBeMethodReference (PMD stock)
+items.forEach(this::process);                            // ↓ now the method itself
+private static void process(…)                           // StaticMethodsModifyStaticState: drop static
+private void process(…)                                  // AvoidPrivateAndProtectedMethods: widen
+void process(…)                                          // UseVisibleForTestingAnnotation: annotate
+
+@VisibleForTesting
+void process(final Item item) { … }                      // clean
+```
+
+`LambdaCanBeMethodReference` is PMD's own rule, in `category/java/codestyle.xml` — this artifact
+ships nothing that references it, but the two compose if you enable that category.
+
 `AvoidPrivateAndProtectedMethods` deliberately skips `static` methods so that
-`StaticMethodsModifyStaticState` reports them first. Expect to run the build three times when
-adopting these rules on an existing codebase.
+`StaticMethodsModifyStaticState` reports them first, and `AvoidLambdaBlockBodies` stops at the block
+body rather than also demanding a method reference. Expect several build runs when adopting these
+rules on an existing codebase — each one surfaces the next step, and each step is mechanical.
 
 ## Build
 

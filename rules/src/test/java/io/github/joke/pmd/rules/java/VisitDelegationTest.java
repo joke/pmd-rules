@@ -5,6 +5,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
+import net.sourceforge.pmd.lang.java.ast.ASTAnonymousClassDeclaration;
+import net.sourceforge.pmd.lang.java.ast.ASTLambdaExpression;
 import net.sourceforge.pmd.lang.java.ast.ASTLocalVariableDeclaration;
 import net.sourceforge.pmd.lang.java.ast.ASTMethodDeclaration;
 import net.sourceforge.pmd.lang.rule.Rule;
@@ -34,6 +36,8 @@ class VisitDelegationTest {
 
     private final ASTLocalVariableDeclaration declaration = mock(ASTLocalVariableDeclaration.class);
     private final ASTMethodDeclaration method = mock(ASTMethodDeclaration.class);
+    private final ASTLambdaExpression lambda = mock(ASTLambdaExpression.class);
+    private final ASTAnonymousClassDeclaration anonymousClass = mock(ASTAnonymousClassDeclaration.class);
 
     @Test
     void useVarForLocalVariablesReportsARewritableDeclaration() {
@@ -157,6 +161,68 @@ class VisitDelegationTest {
         Mockito.doReturn(false).when(rule).isUnmarkedSeam(method);
 
         assertThat(rule.visit(method, context)).isSameAs(context);
+    }
+
+    @Test
+    void avoidLambdaBlockBodiesReportsABlockBody() {
+        final var rule = spy(new AvoidLambdaBlockBodies());
+        final var context = contextFor(rule);
+        Mockito.doReturn(true).when(rule).hasExtractableBlockBody(lambda);
+
+        rule.visit(lambda, context);
+
+        verify(context).addViolation(lambda);
+    }
+
+    @Test
+    void avoidLambdaBlockBodiesReportsNothingOtherwise() {
+        final var rule = spy(new AvoidLambdaBlockBodies());
+        final var context = contextFor(rule);
+        Mockito.doReturn(false).when(rule).hasExtractableBlockBody(lambda);
+
+        rule.visit(lambda, context);
+
+        verify(context, Mockito.never()).addViolation(lambda);
+    }
+
+    @Test
+    void avoidLambdaBlockBodiesReturnsTheDataItWasGiven() {
+        final var rule = spy(new AvoidLambdaBlockBodies());
+        final var context = contextFor(rule);
+        Mockito.doReturn(false).when(rule).hasExtractableBlockBody(lambda);
+
+        assertThat(rule.visit(lambda, context)).isSameAs(context);
+    }
+
+    @Test
+    void avoidAnonymousClassesReportsABodyHoldingLogic() {
+        final var rule = spy(new AvoidAnonymousClasses());
+        final var context = contextFor(rule);
+        Mockito.doReturn(true).when(rule).hasExtractableBody(anonymousClass);
+
+        rule.visit(anonymousClass, context);
+
+        verify(context).addViolation(anonymousClass);
+    }
+
+    @Test
+    void avoidAnonymousClassesReportsNothingOtherwise() {
+        final var rule = spy(new AvoidAnonymousClasses());
+        final var context = contextFor(rule);
+        Mockito.doReturn(false).when(rule).hasExtractableBody(anonymousClass);
+
+        rule.visit(anonymousClass, context);
+
+        verify(context, Mockito.never()).addViolation(anonymousClass);
+    }
+
+    @Test
+    void avoidAnonymousClassesReturnsTheDataItWasGiven() {
+        final var rule = spy(new AvoidAnonymousClasses());
+        final var context = contextFor(rule);
+        Mockito.doReturn(false).when(rule).hasExtractableBody(anonymousClass);
+
+        assertThat(rule.visit(anonymousClass, context)).isSameAs(context);
     }
 
     /**

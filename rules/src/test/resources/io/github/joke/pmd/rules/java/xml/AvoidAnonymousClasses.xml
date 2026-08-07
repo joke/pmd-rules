@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<test-data
+        xmlns="http://pmd.sourceforge.net/rule-tests"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://pmd.sourceforge.net/rule-tests net/sourceforge/pmd/test/schema/rule-tests_1_0_0.xsd">
+
+    <test-code>
+        <description>an anonymous class with a method body is reported</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>3</expected-linenumbers>
+        <code><![CDATA[
+public class Example {
+    Runnable m() {
+        return new Runnable() {
+            @Override
+            public void run() {
+                doTheWork();
+            }
+        };
+    }
+
+    void doTheWork() { }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>an anonymous class declaring only a field is reported</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>3</expected-linenumbers>
+        <code><![CDATA[
+public class Example {
+    Object m() {
+        return new Object() {
+            private final int count = 1;
+        };
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a named nested class is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    Runnable m() {
+        return new Worker();
+    }
+
+    static final class Worker implements Runnable {
+        @Override
+        public void run() { }
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a lambda is not reported: AvoidLambdaBlockBodies owns lambdas</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    Runnable m() {
+        return () -> {
+            doTheWork();
+        };
+    }
+
+    void doTheWork() { }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>the lambda workaround is reported: the two rules close each other's bypass</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>3</expected-linenumbers>
+        <code><![CDATA[
+public class Example {
+    java.util.function.Function<String, String> m() {
+        return new java.util.function.Function<String, String>() {
+            @Override
+            public String apply(String value) {
+                return convert(value);
+            }
+        };
+    }
+
+    String convert(String value) { return value; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>an empty anonymous class body is not reported: the body is the mechanism</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    Object m() {
+        return new Object() { };
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a type-capture idiom is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    Object m() {
+        return new TypeToken<java.util.List<String>>() { };
+    }
+
+    static class TypeToken<T> { }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a strategy enum is not reported: PMD models a constant body as an anonymous class</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public enum Op {
+    PLUS {
+        @Override
+        int apply(int a, int b) { return a + b; }
+    },
+    MINUS {
+        @Override
+        int apply(int a, int b) { return a - b; }
+    };
+
+    abstract int apply(int a, int b);
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>an anonymous class inside an enum method is still reported</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>5</expected-linenumbers>
+        <code><![CDATA[
+public enum Op {
+    PLUS;
+
+    Runnable make() {
+        return new Runnable() {
+            @Override
+            public void run() { }
+        };
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>an enum constant with arguments but no body is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public enum Op {
+    PLUS("+"),
+    MINUS("-");
+
+    private final String symbol;
+
+    Op(String symbol) { this.symbol = symbol; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>suppression is available at the site</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    @SuppressWarnings("PMD.AvoidAnonymousClasses")
+    Runnable m() {
+        return new Runnable() {
+            @Override
+            public void run() { }
+        };
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>several anonymous classes in one method are each reported</description>
+        <expected-problems>2</expected-problems>
+        <expected-linenumbers>3,7</expected-linenumbers>
+        <code><![CDATA[
+public class Example {
+    void m() {
+        Runnable first = new Runnable() {
+            @Override
+            public void run() { }
+        };
+        Runnable second = new Runnable() {
+            @Override
+            public void run() { }
+        };
+        Runnable third = new Runnable() { };
+    }
+}
+        ]]></code>
+    </test-code>
+
+</test-data>

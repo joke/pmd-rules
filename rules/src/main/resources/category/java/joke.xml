@@ -218,4 +218,129 @@ public class Example {
         </example>
     </rule>
 
+    <rule name="AvoidLambdaBlockBodies"
+          language="java"
+          minimumLanguageVersion="8"
+          message="Extract this lambda''s block body into a named method."
+          class="io.github.joke.pmd.rules.java.AvoidLambdaBlockBodies"
+          externalInfoUrl="">
+        <description>
+A lambda body should be an expression, not a block. Logic belongs in something with a name.
+
+A lambda block body is anonymous by construction: no test can call it, no caller can stub it, and its
+branches are reachable only through the pipeline that encloses it.
+
+**A method reference is not required.** Any non-block body satisfies this rule, so a lambda that
+closes over a local variable stays a lambda and simply delegates. That is the whole point — requiring
+a method reference would be close to unusable, because a capturing lambda cannot become one at all.
+PMD's own `LambdaCanBeMethodReference` then converts a bare delegation the rest of the way, so the
+two rules compose.
+
+An empty block is exempt: `() -> { }` has nothing to extract, and a violation nobody can act on is
+worse than one that is missed. A block containing only a comment is exempt for the same reason.
+
+Logic inside an *expression* body — a ternary, a long chain — is deliberately not reported.
+Block-versus-expression is a syntactic proxy for "logic hiding in an anonymous place": a good proxy
+and a cheap one to determine, and the start rather than the whole answer.
+
+Note one conflict with `StaticMethodsModifyStaticState`: a block lambda in a *static* field
+initializer extracts to a static method, which that rule then reports. Suppress it, or better, drop
+`static` from the field so the extracted methods become instance methods.
+        </description>
+        <priority>3</priority>
+        <example>
+<![CDATA[
+public class Example {
+    void bad(java.util.List<Item> items, Context context) {
+        items.forEach(item -> {                     // violation
+            validate(item, context);
+            save(item, context);
+        });
+        map(x -> { return x + 1; });                // violation: converts to an expression
+        map(x -> { save(x); });                     // violation: so does this
+    }
+
+    void good(java.util.List<Item> items, Context context) {
+        items.forEach(item -> process(item, context));  // no violation: not a block
+        items.forEach(this::save);                      // no violation: no body at all
+        map(x -> x + 1);                                // no violation
+        Runnable task = () -> { };                      // no violation: nothing to extract
+        map(x -> x > 0 ? positive(x) : negative(x));    // no violation: expression bodies are out of scope
+    }
+
+    @VisibleForTesting
+    void process(Item item, Context context) {
+        validate(item, context);
+        save(item, context);
+    }
+}
+]]>
+        </example>
+    </rule>
+
+    <rule name="AvoidAnonymousClasses"
+          language="java"
+          message="Extract this anonymous class into a named class."
+          class="io.github.joke.pmd.rules.java.AvoidAnonymousClasses"
+          externalInfoUrl="">
+        <description>
+An anonymous class with a body should be a named class.
+
+Its logic has no name: nothing can instantiate it, nothing can stub it. It is the less testable of
+the two anonymous forms — unlike a lambda it can declare several methods and carry its own fields.
+
+This rule exists alongside `AvoidLambdaBlockBodies` because each is the other's bypass. A ban on
+lambda block bodies alone is escaped in one edit by rewriting the lambda as an anonymous class, and
+every other rule here waves that through: it is not static, its method is `public` and `@Override`,
+and it is not a lambda.
+
+Two exemptions, both because the alternative is a violation nobody can act on:
+
+- An **empty body**, where the body is the mechanism rather than a hiding place. A `TypeToken` or
+  `TypeReference` subclass with an empty body exists precisely to create an anonymous subclass
+  carrying a generic signature at runtime, and no rewrite preserves that.
+- An **enum constant body**. PMD represents one as an anonymous class, so without this the rule would
+  report the strategy enum, which has no anonymous-free rewrite that keeps the enum. An anonymous
+  class declared inside a method *of* an enum is still reported — only the constant's own body is
+  exempt.
+        </description>
+        <priority>3</priority>
+        <example>
+<![CDATA[
+public class Example {
+    Runnable bad() {
+        return new Runnable() {                     // violation
+            @Override
+            public void run() {
+                doTheWork();
+            }
+        };
+    }
+
+    Runnable good() {
+        return new Worker();                        // no violation: a named class
+    }
+
+    Object typeCapture() {
+        return new TypeToken<java.util.List<String>>() { };  // no violation: the body is the mechanism
+    }
+
+    static final class Worker implements Runnable {
+        @Override
+        public void run() {
+            doTheWork();
+        }
+    }
+}
+
+enum Op {
+    PLUS { int apply(int a, int b) { return a + b; } },      // no violation: an enum constant body
+    MINUS { int apply(int a, int b) { return a - b; } };
+
+    abstract int apply(int a, int b);
+}
+]]>
+        </example>
+    </rule>
+
 </ruleset>

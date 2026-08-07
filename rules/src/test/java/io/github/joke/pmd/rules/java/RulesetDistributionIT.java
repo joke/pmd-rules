@@ -52,7 +52,9 @@ class RulesetDistributionIT {
                             "UseVarForLocalVariables",
                             "StaticMethodsModifyStaticState",
                             "AvoidPrivateAndProtectedMethods",
-                            "UseVisibleForTestingAnnotation");
+                            "UseVisibleForTestingAnnotation",
+                            "AvoidLambdaBlockBodies",
+                            "AvoidAnonymousClasses");
         }
     }
 

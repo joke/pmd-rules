@@ -1,0 +1,265 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<test-data
+        xmlns="http://pmd.sourceforge.net/rule-tests"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://pmd.sourceforge.net/rule-tests net/sourceforge/pmd/test/schema/rule-tests_1_0_0.xsd">
+
+    <test-code>
+        <description>a multi-statement block body is reported</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>3</expected-linenumbers>
+        <code><![CDATA[
+public class Example {
+    void m(java.util.List<String> items) {
+        items.forEach(item -> {
+            validate(item);
+            save(item);
+        });
+    }
+
+    void validate(String s) { }
+    void save(String s) { }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a single-statement block body is reported: it converts mechanically to an expression</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>3</expected-linenumbers>
+        <code><![CDATA[
+public class Example {
+    void m(java.util.List<String> items) {
+        items.forEach(item -> { save(item); });
+    }
+
+    void save(String s) { }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a block body returning a value is reported</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>3</expected-linenumbers>
+        <code><![CDATA[
+public class Example {
+    java.util.function.Function<Integer, Integer> m() {
+        return x -> { return x + 1; };
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>an expression body is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    java.util.function.Function<Integer, Integer> m() {
+        return x -> x + 1;
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a method reference is not reported: it has no body at all</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    void m(java.util.List<String> items) {
+        items.forEach(this::save);
+    }
+
+    void save(String s) { }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>an expression lambda closing over a local is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    void m(java.util.List<String> items, String context) {
+        items.forEach(item -> process(item, context));
+    }
+
+    void process(String item, String context) { }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a bare delegation is left to PMD's LambdaCanBeMethodReference</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    void m(java.util.List<String> items) {
+        items.forEach(item -> save(item));
+    }
+
+    void save(String s) { }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>an empty block body is not reported: there is nothing to extract</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    void m() {
+        Runnable task = () -> { };
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>an empty block body with explicit parameters is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    void m(java.util.List<String> names) {
+        names.forEach((String s) -> { });
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a block containing only a comment is not reported: a comment is not a statement</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    void m() {
+        Runnable task = () -> {
+            // deliberately does nothing
+        };
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a branching expression body is not reported: expression bodies are out of scope</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    java.util.function.Function<Integer, Integer> m() {
+        return x -> x > 0 ? positive(x) : negative(x);
+    }
+
+    int positive(int x) { return x; }
+    int negative(int x) { return -x; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a long chain in an expression body is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    java.util.function.Function<java.util.List<String>, Long> m() {
+        return list -> list.stream().filter(java.util.Objects::nonNull).count();
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a nested block lambda is reported</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>3</expected-linenumbers>
+        <code><![CDATA[
+public class Example {
+    void m(java.util.List<java.util.List<String>> nested) {
+        nested.forEach(inner -> inner.forEach(item -> {
+            validate(item);
+            save(item);
+        }));
+    }
+
+    void validate(String s) { }
+    void save(String s) { }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>suppression is available at the site</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    @SuppressWarnings("PMD.AvoidLambdaBlockBodies")
+    void m(java.util.List<String> items) {
+        items.forEach(item -> {
+            validate(item);
+            save(item);
+        });
+    }
+
+    void validate(String s) { }
+    void save(String s) { }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>several block lambdas in one method are each reported</description>
+        <expected-problems>2</expected-problems>
+        <expected-linenumbers>3,6</expected-linenumbers>
+        <code><![CDATA[
+public class Example {
+    void m(java.util.List<String> items) {
+        items.forEach(item -> {
+            save(item);
+        });
+        items.forEach(item -> {
+            validate(item);
+        });
+        items.forEach(item -> save(item));
+        items.forEach(item -> { });
+    }
+
+    void validate(String s) { }
+    void save(String s) { }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>the rule is skipped below Java 8, where lambdas do not exist</description>
+        <expected-problems>0</expected-problems>
+        <source-type>java 1.7</source-type>
+        <code><![CDATA[
+public class Example {
+    void m() {
+        int i = 0;
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>the rule applies from Java 8</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>3</expected-linenumbers>
+        <source-type>java 8</source-type>
+        <code><![CDATA[
+public class Example {
+    void m(java.util.List<String> items) {
+        items.forEach(item -> {
+            save(item);
+        });
+    }
+
+    void save(String s) { }
+}
+        ]]></code>
+    </test-code>
+
+</test-data>
