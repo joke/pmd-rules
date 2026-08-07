@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<test-data
+        xmlns="http://pmd.sourceforge.net/rule-tests"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://pmd.sourceforge.net/rule-tests net/sourceforge/pmd/test/schema/rule-tests_1_0_0.xsd">
+
+    <test-code>
+        <description>an explicitly typed local variable is reported</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>3</expected-linenumbers>
+        <code><![CDATA[
+public class Example {
+    void m() {
+        String name = "joke";
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a var-declared local variable is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    void m() {
+        var name = "joke";
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a basic for-loop initializer is reported</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>3</expected-linenumbers>
+        <code><![CDATA[
+public class Example {
+    void m() {
+        for (int i = 0; i < 3; i++) { }
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a var-declared basic for-loop initializer is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    void m() {
+        for (var i = 0; i < 3; i++) { }
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>an enhanced for-loop variable is reported</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>3</expected-linenumbers>
+        <code><![CDATA[
+public class Example {
+    void m(java.util.List<String> names) {
+        for (String s : names) { }
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a var-declared enhanced for-loop variable is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    void m(java.util.List<String> names) {
+        for (var s : names) { }
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a try-with-resources declaration is reported</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>3</expected-linenumbers>
+        <code><![CDATA[
+public class Example {
+    void m() throws java.io.IOException {
+        try (java.io.InputStream in = open()) { }
+    }
+
+    java.io.InputStream open() {
+        return null;
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a declaration with no initializer is not reported: var requires one</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    void m() {
+        int i;
+        i = 1;
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a null-initialized declaration is not reported: null has no type to infer</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    void m() {
+        String s = null;
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>an array-initializer shorthand is not reported: var forbids the form</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    void m() {
+        int[] a = {1, 2};
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>an explicit array allocation is reported: it is not the shorthand form</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>3</expected-linenumbers>
+        <code><![CDATA[
+public class Example {
+    void m() {
+        int[] a = new int[] {1, 2};
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a lambda initializer is not reported: a lambda needs a target type</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    void m() {
+        Runnable r = () -> { };
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a method-reference initializer is not reported: it needs a target type too</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    void m() {
+        java.util.function.Supplier<String> s = String::new;
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a multi-variable declaration is not reported: var forbids multiple declarators</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    void m() {
+        int a = 1, b = 2;
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a field is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    private String name = "joke";
+    private static final String CONSTANT = "c";
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>method and constructor parameters are not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    Example(String ctorParam) { }
+
+    void m(String param) { }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a catch parameter is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    void m() {
+        try {
+            throw new java.io.IOException();
+        } catch (java.io.IOException e) {
+        }
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>an explicitly typed lambda parameter is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    void m(java.util.List<String> names) {
+        names.forEach((String s) -> { });
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>several declarations in one method are each reported</description>
+        <expected-problems>2</expected-problems>
+        <expected-linenumbers>3,4</expected-linenumbers>
+        <code><![CDATA[
+public class Example {
+    void m() {
+        String a = "x";
+        int b = 1;
+        var c = 2;
+        String d = null;
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>the rule is skipped below Java 10, where var does not exist</description>
+        <expected-problems>0</expected-problems>
+        <source-type>java 1.8</source-type>
+        <code><![CDATA[
+public class Example {
+    void m() {
+        String name = "joke";
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>the rule applies from Java 10</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>3</expected-linenumbers>
+        <source-type>java 10</source-type>
+        <code><![CDATA[
+public class Example {
+    void m() {
+        String name = "joke";
+    }
+}
+        ]]></code>
+    </test-code>
+
+</test-data>

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<ruleset name="joke"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+
+    <description>
+        Custom PMD rules for Java. This file is the catalogue: every rule is declared here with its
+        implementing class and documentation. Reference individual rules from it, or take all of
+        them at once through rulesets/java/joke.xml.
+
+        Nothing here references a PMD stock category, so this file resolves identically under every
+        PMD 7 version.
+    </description>
+
+    <rule name="UseVarForLocalVariables"
+          language="java"
+          minimumLanguageVersion="10"
+          message="Use ''var'' instead of an explicit local variable type."
+          class="io.github.joke.pmd.rules.java.UseVarForLocalVariables"
+          externalInfoUrl="">
+        <description>
+Local variable declarations should use `var` where it compiles and preserves the declared type.
+Repeating a type the compiler already knows adds no information and makes a declaration harder to
+change.
+
+The rule reports single-variable local declarations, including the variables of basic and enhanced
+for loops and of try-with-resources.
+
+It deliberately does not report declarations that `var` cannot express: a declaration with no
+initializer, one initialized to `null`, one using array-initializer shorthand, one initialized with
+a lambda or a method reference, and one declaring more than one variable. Fields and method,
+constructor, catch and lambda parameters are out of scope entirely.
+        </description>
+        <priority>3</priority>
+        <example>
+<![CDATA[
+public class Example {
+    void bad() {
+        String name = "joke";                      // violation
+        for (int i = 0; i < 3; i++) { }            // violation
+        for (String s : names) { }                 // violation
+    }
+
+    void good() {
+        var name = "joke";
+        for (var i = 0; i < 3; i++) { }
+        for (var s : names) { }
+
+        int uninitialized;                         // no violation: var needs an initializer
+        String nothing = null;                     // no violation: null has no type to infer
+        int[] shorthand = {1, 2};                  // no violation: var forbids this form
+        Runnable task = () -> { };                 // no violation: a lambda needs a target type
+        Supplier<String> make = String::new;       // no violation: so does a method reference
+        int a = 1, b = 2;                          // no violation: var forbids multiple declarators
+    }
+}
+]]>
+        </example>
+    </rule>
+
+</ruleset>

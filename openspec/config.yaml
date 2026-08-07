@@ -1,20 +1,26 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+context: |
+  Tech stack: custom PMD 7 rules, published as io.github.joke.pmd:rules
+  Main source targets Java 11 (built on Liberica 25); test source compiles at the toolchain level.
+  Not Java 8: at --release 8 javac cannot resolve ElementType.MODULE while reading JSpecify's
+  @NullMarked, and -Werror turns that unsuppressable warning into a build failure.
+  PMD is compileOnly at 7.0.0 — the supported floor. Rules compiled against the floor run on newer
+  PMD; the reverse throws NoSuchMethodError inside the consumer's analysis. Never raise the floor
+  as a side effect of a dependency update.
+  The published POM declares no dependencies: the consumer supplies PMD via Gradle's pmd
+  configuration at a version they choose.
+  Testing: JUnit 5 with net.sourceforge.pmd:pmd-test, AssertJ, Pitest (100/100/100)
+  No Groovy, no Spock — CodeNarc config is retained in the convention plugin but inert here
+  We use conventional commits
+  Domain: Java-implemented PMD rules shipped as a category file plus a convenience ruleset,
+  referencing no PMD stock category so the artifact floats across all of PMD 7.x
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+rules:
+  design:
+  - Rules are Java classes, never inline XPath — XPath rules escape every quality gate the build applies
+  - Shipped resources must reference nothing outside this artifact
+  - Prefer mermaid diagrams for round/ordering flows
+  tasks:
+  - Always add a final task to run `./gradlew check` to verify everything. NEVER continue if there are violations!
+  - Commit the completed spec with /commit-commands:commit

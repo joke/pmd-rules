@@ -1,0 +1,92 @@
+plugins {
+    id 'java'
+    id 'maven-publish'
+    id 'conventions'
+}
+
+dependencies {
+    // compileOnly, never api: PMD is supplied by the consumer's own `pmd` configuration at a
+    // version they choose. The published POM declares no dependencies at all.
+    compileOnly platform(project(':dependencies'))
+    compileOnly 'net.sourceforge.pmd:pmd-core'
+    compileOnly 'net.sourceforge.pmd:pmd-java'
+    compileOnly 'org.jspecify:jspecify'
+
+    testImplementation platform(project(':dependencies'))
+    testImplementation 'net.sourceforge.pmd:pmd-core'
+    testImplementation 'net.sourceforge.pmd:pmd-java'
+    testImplementation 'net.sourceforge.pmd:pmd-test'
+    testImplementation 'org.assertj:assertj-core'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+
+    testRuntimeOnly platform(project(':dependencies'))
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+}
+
+// The published artifact must carry no dependencies: PMD is the consumer's to choose. A leak here
+// would silently impose a version on every consumer, which is exactly what this project declines to
+// do, and it would only surface as a version conflict in someone else's build.
+def verifyPomHasNoDependencies = tasks.register('verifyPomHasNoDependencies') {
+    dependsOn tasks.named('generatePomFileForMavenPublication')
+    def pom = layout.buildDirectory.file('publications/maven/pom-default.xml')
+    inputs.file(pom)
+    outputs.upToDateWhen { true }
+    doLast {
+        def declared = new groovy.xml.XmlSlurper().parse(pom.get().asFile)
+                .dependencies.dependency.collect { "${it.groupId}:${it.artifactId}" }
+        if (!declared.isEmpty()) {
+            throw new GradleException("Published POM must declare no dependencies, but found: ${declared}")
+        }
+    }
+}
+
+tasks.named('check') {
+    dependsOn verifyPomHasNoDependencies
+}
+
+// Cross-version compatibility is verified rather than asserted. The default test runtime resolves
+// PMD at the floor declared in the platform, so the `integrationTest` task registered by the
+// convention plugin *is* the 7.0.0 run; each version listed here adds one more task running the same
+// integration tests against that version's PMD. `check` depends on all of them, so `./gradlew check`
+// reproduces the matrix locally, which is where a break is cheapest to find.
+//
+// This lives here rather than in the convention plugin because the plugin is destined for extraction
+// and reuse by projects that do not build PMD rules.
+def additionalPmdVersions = ['7.26.0']
+
+additionalPmdVersions.each { pmdVersion ->
+    def suffix = pmdVersion.replace('.', '_')
+
+    def pmdRuntime = configurations.create("pmdRuntime$suffix") {
+        canBeConsumed = false
+        canBeResolved = true
+    }
+    dependencies.add(pmdRuntime.name, dependencies.platform(project(':dependencies')))
+    dependencies.add(pmdRuntime.name, "net.sourceforge.pmd:pmd-core:$pmdVersion")
+    dependencies.add(pmdRuntime.name, "net.sourceforge.pmd:pmd-java:$pmdVersion")
+    dependencies.add(pmdRuntime.name, 'org.assertj:assertj-core')
+    dependencies.add(pmdRuntime.name, 'org.junit.jupiter:junit-jupiter-api')
+    dependencies.add(pmdRuntime.name, 'org.junit.jupiter:junit-jupiter-engine')
+    dependencies.add(pmdRuntime.name, 'org.junit.platform:junit-platform-launcher')
+
+    def integrationTestTask = tasks.register("integrationTestPmd$suffix", Test) {
+        description = "Runs the integration tests against PMD $pmdVersion"
+        group = 'verification'
+        useJUnitPlatform {
+            includeTags 'integration'
+        }
+        // Excludes candidate classes before JUnit loads them. The tag filter alone is not enough:
+        // the rule unit tests extend pmd-test's SimpleAggregatorTst, which this configuration
+        // deliberately does not carry, so loading them to read their tags would fail outright.
+        include '**/*IT.class'
+        testClassesDirs = sourceSets.test.output.classesDirs
+        // main output carries both the rule classes and the ruleset resources, so the ruleset is
+        // resolved from the classpath exactly as it is from the published jar.
+        classpath = sourceSets.test.output + sourceSets.main.output + pmdRuntime
+    }
+
+    tasks.named('check') {
+        dependsOn integrationTestTask
+    }
+}

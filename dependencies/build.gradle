@@ -1,0 +1,29 @@
+plugins {
+    id 'java-platform'
+    id 'conventions'
+}
+
+javaPlatform {
+    allowDependencies()
+}
+
+dependencies {
+
+    // The JUnit 5 line, not 6: pmd-test 7.0.0 is built against JUnit 5.8.2, and this is the
+    // harness the rule tests run inside. Moving to JUnit 6 is a change of its own.
+    api platform('org.junit:junit-bom:5.14.4')
+
+    constraints {
+        api 'org.assertj:assertj-core:3.27.7'
+        api 'org.codenarc:CodeNarc:3.7.0-groovy-4.0'
+        api 'org.jspecify:jspecify:1.0.0'
+
+        // The supported PMD floor. Rules compiled against the floor run on newer PMD; the reverse
+        // throws NoSuchMethodError inside the consumer's analysis. Raising this is a decision to be
+        // recorded in a change, never a side effect of a dependency update.
+        api 'net.sourceforge.pmd:pmd-core:7.0.0'
+        api 'net.sourceforge.pmd:pmd-java:7.0.0'
+        api 'net.sourceforge.pmd:pmd-test:7.0.0'
+    }
+
+}

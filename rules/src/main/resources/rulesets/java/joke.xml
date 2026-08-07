@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<ruleset name="joke"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+
+    <description>
+        Every rule this artifact defines, as a single reference for consumers who want all of them.
+
+        This ruleset references only category/java/joke.xml. It deliberately pulls in none of PMD's
+        stock categories and excludes nothing from them: a reference to a stock rule resolves against
+        the consumer's PMD version, and a name PMD has since renamed or removed is a hard
+        ruleset-load failure. Composing this with PMD's own categories is the consumer's business.
+    </description>
+
+    <rule ref="category/java/joke.xml"/>
+
+</ruleset>
