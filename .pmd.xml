@@ -57,7 +57,13 @@
         <exclude name="AvoidInstantiatingObjectsInLoops"/>
     </rule>
 
-    <!-- UseVarForLocalVariables is not applied here: this project's main source targets Java 8,
-         where var does not exist. The rule this project publishes will reach this build through the
-         centralized conventions plugin, which will have to exclude it for the same reason. -->
+    <!-- The rules this project publishes, applied to this project. The jar reaches PMD through the
+         `pmd` configuration, so this reference resolves off the analysis classpath exactly as the
+         one in the README does for a consumer — this file is the worked example.
+
+         Composing our ruleset with PMD's stock categories is done here rather than in the shipped
+         resources on purpose: a published ruleset that referenced a stock category would break the
+         day PMD renamed a rule in it. That composition is the consumer's job, and this is us being
+         a consumer. -->
+    <rule ref="rulesets/java/joke.xml"/>
 </ruleset>

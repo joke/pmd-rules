@@ -4,7 +4,34 @@ plugins {
     id 'conventions'
 }
 
+// This project analyses its own source with the rules it publishes.
+//
+// The jar arrives on the `pmd` configuration by inheritance rather than by being declared on it
+// directly. Gradle's PmdPlugin supplies PMD itself through `defaultDependencies`, which applies only
+// while the configuration's own dependency set is empty — declaring anything on `pmd` directly
+// therefore replaces the tool instead of joining it, and re-declaring PMD by hand would hardcode a
+// set of artifacts (pmd-java, pmd-ant, …) that varies by Gradle version. Extending keeps the
+// dependency in `allDependencies` but out of `dependencies`, so the default still fires.
+//
+// project(':rules') rather than sourceSets.main.output: that is the shape a consumer receives, so a
+// packaging fault such as a resource missing from the jar fails here rather than in someone
+// else's build.
+//
+// A rule that throws therefore breaks the build that produces it. See the README for how to build
+// past that.
+configurations {
+    ownRules {
+        canBeConsumed = false
+        canBeResolved = false
+    }
+}
+configurations.named('pmd') {
+    extendsFrom configurations.ownRules
+}
+
 dependencies {
+    ownRules project(':rules')
+
     // compileOnly, never api: PMD is supplied by the consumer's own `pmd` configuration at a
     // version they choose. The published POM declares no dependencies at all.
     compileOnly platform(project(':dependencies'))
@@ -22,6 +49,7 @@ dependencies {
     testRuntimeOnly platform(project(':dependencies'))
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+
 }
 
 // The published artifact must carry no dependencies: PMD is the consumer's to choose. A leak here

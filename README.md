@@ -91,6 +91,31 @@ Runs the unit tests, the integration tests against every supported PMD version, 
 Error Prone with NullAway, mutation testing at 100% mutation, coverage and test strength, and the
 empty-POM check.
 
+### This project runs its own rules on itself
+
+`rules/build.gradle` puts `project(':rules')` on the `pmd` configuration and `.pmd.xml` references
+`rulesets/java/joke.xml`, so `pmdMain` and `pmdTest` analyse this repository with the artifact this
+repository builds. It is the same wiring the [Use it](#use-it) section describes for consumers, and
+it means a new rule has to leave this repository clean as part of the change that adds it.
+
+The consequence is that **a broken rule breaks the build that produces it**, and the repair is to
+edit the rule that is currently failing. To build past it:
+
+```
+./gradlew check -x pmdMain -x pmdTest
+```
+
+Note also that `pmdMain` runs at Gradle's `toolVersion` — a single, recent PMD — so a green run says
+nothing about the 7.0.0 floor. The integration matrix owns that question.
+
+### Rule test data stays in XML
+
+The `pmd-test` descriptors under `rules/src/test/resources` deliberately contain violating code, and
+the examples in `category/java/joke.xml` do too. Both are invisible to `pmdMain` and `pmdTest` only
+because they are XML. Do not move rule fixtures into `.java` files — the build would flag its own
+test data, and excluding the fixture path to fix it would silently exclude whatever moved there
+next.
+
 ## License
 
 [Apache License 2.0](LICENSE)

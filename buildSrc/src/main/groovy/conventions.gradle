@@ -123,7 +123,12 @@ pluginManager.withPlugin('pmd') {
         consoleOutput = false
         toolVersion = '7.26.0'
         rulesMinimumPriority = 5
-        ruleSets = ["$rootDir/.pmd.xml"]
+        // ruleSetFiles, not ruleSets: `ruleSets` is a List<String> that Gradle cannot track as a
+        // file input, so editing .pmd.xml left the pmd tasks UP-TO-DATE and the old ruleset in
+        // force. ruleSetFiles is a FileCollection and is tracked. Clearing ruleSets is required
+        // because it otherwise keeps Gradle's default of category/java/errorprone.xml.
+        ruleSets = []
+        ruleSetFiles = files("$rootDir/.pmd.xml")
     }
 }
 
