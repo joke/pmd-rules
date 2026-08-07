@@ -94,4 +94,4 @@
 - [x] 11.1 Confirm the generated POM declares no dependency and that `verifyPomHasNoDependencies` fails when one is deliberately added
 - [x] 11.2 Confirm `:rules` and `:dependencies` resolve a non-`unspecified` version and the root project stays `unspecified`
 - [x] 11.3 Run `./gradlew check` to verify everything. NEVER continue if there are violations
-- [ ] 11.4 Commit the completed change with `/commit-commands:commit`
+- [x] 11.4 Commit the completed change with `/commit-commands:commit`
