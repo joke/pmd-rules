@@ -123,12 +123,21 @@ pluginManager.withPlugin('pmd') {
         consoleOutput = false
         toolVersion = '7.26.0'
         rulesMinimumPriority = 5
-        // ruleSetFiles, not ruleSets: `ruleSets` is a List<String> that Gradle cannot track as a
-        // file input, so editing .pmd.xml left the pmd tasks UP-TO-DATE and the old ruleset in
-        // force. ruleSetFiles is a FileCollection and is tracked. Clearing ruleSets is required
-        // because it otherwise keeps Gradle's default of category/java/errorprone.xml.
-        ruleSets = []
-        ruleSetFiles = files("$rootDir/.pmd.xml")
+        // ruleSets, not ruleSetFiles: the ruleset is a resource inside the rules jar, resolved off
+        // the analysis classpath exactly as a consumer resolves it.
+        //
+        // This was ruleSetFiles while the ruleset was a loose file at the repository root, because
+        // `ruleSets` is a List<String> Gradle cannot track as a file input and editing it left the
+        // pmd tasks UP-TO-DATE with the old ruleset in force. That does not carry over to a
+        // classpath resource: the tracked input is then the `pmd` configuration, a @Classpath input
+        // on the Pmd task, so editing the resource rebuilds the jar and the tasks re-run. Tracking
+        // is preserved, not traded away.
+        //
+        // Assigned rather than appended, because ruleSets otherwise keeps Gradle's default of
+        // category/java/errorprone.xml. No $rootDir reference: this block has to survive the
+        // plugin's extraction, and each project declares the rules artifact on its own `pmd`
+        // configuration.
+        ruleSets = ['rulesets/java/joke-strict.xml']
     }
 }
 

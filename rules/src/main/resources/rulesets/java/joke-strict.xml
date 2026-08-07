@@ -1,11 +1,27 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="UTF-8"?>
 
-<ruleset name="Custom Rules"
+<ruleset name="joke-strict"
          xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
 
-    <description>project rules</description>
+    <description>
+        The whole analysis this project runs on itself: PMD's stock categories, composed with the
+        exclusions and property overrides that make them workable, plus every rule this artifact
+        defines. One reference, no composition to maintain.
+
+        Requires PMD 7.26.0 or later. This floor is higher than the 7.0.0 floor carried by the rule
+        classes, by category/java/joke.xml and by rulesets/java/joke.xml. Unlike those, this file
+        names rules it does not own — a stock rule renamed or removed by a later PMD is a
+        ruleset-load failure here, and at least one name it excludes (ImplicitFunctionalInterface)
+        did not exist in 7.0.0. Every version the floor admits is exercised by this project's
+        cross-version integration matrix.
+
+        On a PMD older than that, or to compose the stock categories differently, reference
+        rulesets/java/joke.xml instead and bring your own composition. Gradle's `ruleSets` cannot
+        subtract from a ruleset, so wanting this composition minus one rule means writing your own
+        ruleset file that references this one and excludes from it.
+    </description>
 
     <rule ref="category/java/bestpractices.xml">
         <exclude name="GuardLogStatement"/>
@@ -20,11 +36,10 @@
         <exclude name="ShortVariable"/>
         <exclude name="UseExplicitTypes"/>
         <exclude name="AtLeastOneConstructor"/>
-        <!-- In direct opposition to UseStaticImports, which this project publishes: that rule only
+        <!-- In direct opposition to UseStaticImports, which this artifact defines: that rule only
              ever adds static imports and this one caps them at four, so no configuration satisfies
              both. Imports are cheap and the IDE folds them away; a cap buys nothing and costs the
-             readability it claims to protect. Consumers enabling this category alongside
-             rulesets/java/joke.xml need the same exclusion. -->
+             readability it claims to protect. -->
         <exclude name="TooManyStaticImports"/>
     </rule>
 
@@ -63,13 +78,6 @@
         <exclude name="AvoidInstantiatingObjectsInLoops"/>
     </rule>
 
-    <!-- The rules this project publishes, applied to this project. The jar reaches PMD through the
-         `pmd` configuration, so this reference resolves off the analysis classpath exactly as the
-         one in the README does for a consumer — this file is the worked example.
-
-         Composing our ruleset with PMD's stock categories is done here rather than in the shipped
-         resources on purpose: a published ruleset that referenced a stock category would break the
-         day PMD renamed a rule in it. That composition is the consumer's job, and this is us being
-         a consumer. -->
     <rule ref="rulesets/java/joke.xml"/>
+
 </ruleset>

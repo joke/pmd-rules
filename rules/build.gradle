@@ -87,7 +87,36 @@ tasks.named('check') {
 //
 // This lives here rather than in the convention plugin because the plugin is destined for extraction
 // and reuse by projects that do not build PMD rules.
+def pmdFloorVersion = '7.0.0'
 def additionalPmdVersions = ['7.26.0']
+
+// rulesets/java/joke-strict.xml names PMD stock rules this artifact does not own, so unlike the
+// other two resources it cannot claim the 7.0.0 floor — ImplicitFunctionalInterface, which it
+// excludes, did not exist at 7.0.0. These are the versions it is promised on, and the only ones
+// StrictRulesetDistributionIT runs against. Keep in step with the floor stated in the ruleset's own
+// <description> and in the README.
+def strictRulesetVersions = ['7.26.0'] as Set
+
+// A version listed here that the matrix does not run would remove the strict ruleset's coverage
+// without removing anything visible, so the mistake fails the build instead.
+def matrixVersions = ([pmdFloorVersion] + additionalPmdVersions) as Set
+def unmatched = strictRulesetVersions - matrixVersions
+if (!unmatched.isEmpty()) {
+    throw new GradleException(
+            "strictRulesetVersions names PMD versions the integration matrix does not run: ${unmatched.sort()}. " +
+                    "Matrix runs: ${matrixVersions.sort()}")
+}
+
+def strictRulesetIT = '**/StrictRulesetDistributionIT.class'
+
+// The convention plugin's `integrationTest` task is the floor run: it resolves PMD at the version
+// the platform declares, which is pmdFloorVersion. It analyses the strict ruleset only if the floor
+// is one of the versions that ruleset is promised on.
+if (!strictRulesetVersions.contains(pmdFloorVersion)) {
+    tasks.named('integrationTest') {
+        exclude strictRulesetIT
+    }
+}
 
 additionalPmdVersions.each { pmdVersion ->
     def suffix = pmdVersion.replace('.', '_')
@@ -114,6 +143,9 @@ additionalPmdVersions.each { pmdVersion ->
         // the rule unit tests extend pmd-test's SimpleAggregatorTst, which this configuration
         // deliberately does not carry, so loading them to read their tags would fail outright.
         include '**/*IT.class'
+        if (!strictRulesetVersions.contains(pmdVersion)) {
+            exclude strictRulesetIT
+        }
         testClassesDirs = sourceSets.test.output.classesDirs
         // main output carries both the rule classes and the ruleset resources, so the ruleset is
         // resolved from the classpath exactly as it is from the published jar.

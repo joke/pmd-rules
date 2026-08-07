@@ -11,6 +11,20 @@ dependencies {
 }
 
 pmd {
+    ruleSets = ['rulesets/java/joke-strict.xml']
+}
+```
+
+That is the whole analysis this project runs on itself: PMD's `bestpractices`, `codestyle`, `design`,
+`errorprone`, `multithreading` and `performance` categories, composed with the exclusions and
+property overrides that make them workable, plus every rule this artifact defines. It needs **PMD
+7.26.0 or later** — see [PMD versions](#pmd-versions).
+
+To keep your own composition and take only the rules from here, reference the convenience ruleset and
+add PMD's categories yourself:
+
+```groovy
+pmd {
     ruleSets = [
             'category/java/bestpractices.xml',   // PMD's own categories, if you want them
             'rulesets/java/joke.xml',            // every rule this artifact defines
@@ -27,6 +41,19 @@ pmd {
 }
 ```
 
+If you enable PMD's `codestyle` category alongside these rules, exclude `TooManyStaticImports`. It is
+in direct opposition to `UseStaticImports`, which this artifact defines, and no configuration
+satisfies both. `rulesets/java/joke-strict.xml` already excludes it.
+
+**`ruleSets` cannot subtract.** Wanting `joke-strict.xml` minus one rule means writing your own
+ruleset file that references it and excludes from it, and pointing `ruleSetFiles` at that:
+
+```xml
+<rule ref="rulesets/java/joke-strict.xml">
+    <exclude name="SomeRuleYouDisagreeWith"/>
+</rule>
+```
+
 ## PMD versions
 
 The rules are compiled against **PMD 7.0.0** and run on any later PMD 7.x. Compiling against the
@@ -35,9 +62,28 @@ PMD, whereas rules built against a newer API fail with `NoSuchMethodError` insid
 point where the stack trace blames PMD rather than this artifact. Every release runs its integration
 tests against both the floor and the newest supported version.
 
-The shipped rulesets reference none of PMD's stock categories and exclude nothing from them, so they
-resolve identically under every PMD 7 version. Composing them with PMD's own categories — as above —
-is yours to do, which is what keeps your PMD version yours to choose.
+The shipped resources do not all carry the same floor:
+
+| resource | PMD floor | why |
+|---|---|---|
+| the rule classes | 7.0.0 | compiled against the floor API |
+| `category/java/joke.xml` | 7.0.0 | names only rules this artifact defines |
+| `rulesets/java/joke.xml` | 7.0.0 | references only `category/java/joke.xml` |
+| `rulesets/java/joke-strict.xml` | **7.26.0** | names PMD stock rules this artifact does not own |
+
+The first three reference none of PMD's stock categories and exclude nothing from them, so they
+resolve identically under every PMD 7 version. Composing them with PMD's own categories is yours to
+do, which is what keeps your PMD version yours to choose.
+
+`rulesets/java/joke-strict.xml` is the exception, and it is why the composition can ship at all. A
+file naming stock rules is pinned to the PMD versions that still spell those rules the same way: a
+renamed or removed rule is a hard ruleset-load failure, not a warning. Its floor is 7.26.0 rather
+than 7.0.0 for a concrete reason — it excludes `ImplicitFunctionalInterface`, which PMD added after
+7.0.0. Every version at or above that floor is exercised by this project's cross-version integration
+matrix before release.
+
+**On a PMD older than 7.26.0, use `rulesets/java/joke.xml`** and compose the stock categories
+yourself.
 
 **The published POM declares no dependencies.** PMD comes from your `pmd` configuration at whatever
 version you picked, and this artifact never overrides it. A build verifies the POM is empty on every
@@ -427,10 +473,13 @@ empty-POM check.
 
 ### This project runs its own rules on itself
 
-`rules/build.gradle` puts `project(':rules')` on the `pmd` configuration and `.pmd.xml` references
-`rulesets/java/joke.xml`, so `pmdMain` and `pmdTest` analyse this repository with the artifact this
-repository builds. It is the same wiring the [Use it](#use-it) section describes for consumers, and
-it means a new rule has to leave this repository clean as part of the change that adds it.
+`rules/build.gradle` puts `project(':rules')` on the `pmd` configuration and the convention plugin
+sets `ruleSets = ['rulesets/java/joke-strict.xml']`, so `pmdMain` and `pmdTest` analyse this
+repository with the artifact this repository builds — through the same published resource a consumer
+references, resolved off the analysis classpath the same way. There is no ruleset file in this
+repository; the composition under test is the shipped one. It is exactly the wiring the
+[Use it](#use-it) section describes, and it means a new rule has to leave this repository clean as
+part of the change that adds it.
 
 The consequence is that **a broken rule breaks the build that produces it**, and the repair is to
 edit the rule that is currently failing. To build past it:
@@ -441,6 +490,13 @@ edit the rule that is currently failing. To build past it:
 
 Note also that `pmdMain` runs at Gradle's `toolVersion` — a single, recent PMD — so a green run says
 nothing about the 7.0.0 floor. The integration matrix owns that question.
+
+`toolVersion` and the strict ruleset's floor move together: `pmdMain` resolves
+`rulesets/java/joke-strict.xml`, so `toolVersion` must be at or above the floor that ruleset
+declares. Raising `toolVersion` therefore means adding that version to `additionalPmdVersions` in
+`rules/build.gradle`, so the matrix still covers what dogfooding runs. The `strictRulesetVersions`
+set there names the versions the strict ruleset is promised on, and the build fails if it names a
+version the matrix does not run.
 
 ### Rule test data stays in XML
 
