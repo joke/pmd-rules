@@ -60,4 +60,162 @@ public class Example {
         </example>
     </rule>
 
+    <rule name="StaticMethodsModifyStaticState"
+          language="java"
+          message="A ''static'' method must write private static state, or belong to a utility class."
+          class="io.github.joke.pmd.rules.java.StaticMethodsModifyStaticState"
+          externalInfoUrl="">
+        <description>
+A `static` method should exist only to write class-level state. Anything else is an instance method.
+
+This is about what the modifier tells a reader, not about mocking — Mockito's inline mock maker and
+Spock's `SpyStatic` both mock statics, so a mockability argument would simply be false. Left
+unconstrained, `static` means any of five things — helper, factory, constant accessor, entry point,
+class-state mutator — and therefore means nothing. Under this rule it means exactly one thing, and
+seeing it tells you to go find the field.
+
+A method is accepted when it writes a private static field: a plain assignment, a compound
+assignment, an increment or a decrement. A read is not a write — a static method that only returns a
+private static field is an accessor whose encapsulation was already fake, and the field should have
+been public. A mutating call such as `REGISTRY.put(k, v)` is not a write either, because nothing can
+tell `put` from `size`. It follows that a `private static final` field can never justify a static
+method, since a final field is only ever assigned in its initializer.
+
+A utility class is also accepted: one that declares no instance methods and no public or protected
+constructor. A class declaring no constructor at all is judged on its implicit one, which takes the
+class's own access — so a `public class` with no declared constructor is not a utility class. An
+interface has no constructor, and an enum's implicit constructor is always private.
+
+`main(String[])` and `@BeforeAll` / `@AfterAll` methods are exempt, because the platform forces them
+to be static and a violation nobody can fix is worse than one that is missed. A `@MethodSource`
+provider is not exempt — the annotation names it in a string, so nothing can pick it out of the
+other static methods — and neither is a Spring `static @Bean`. Suppress those at the site.
+        </description>
+        <priority>3</priority>
+        <example>
+<![CDATA[
+public class Example {
+    private static int count;
+    private static final Map<String, String> REGISTRY = new HashMap<>();
+
+    static String format(int n) { return "" + n; }        // violation: a helper, not state
+    static int get() { return count; }                    // violation: a read, not a write
+    static void register(String k, String v) {            // violation: not a write to the field
+        REGISTRY.put(k, v);
+    }
+
+    static void bump() { count++; }                       // no violation: writes private static state
+    static void reset() { count = 0; }                    // no violation: so does this
+    public static void main(String[] args) { }            // no violation: the JVM requires static
+
+    String betterAsAnInstanceMethod(int n) { return "" + n; }
+}
+
+final class Utility {                                     // no instance methods, private constructor
+    private Utility() { }
+
+    static String format(int n) { return "" + n; }        // no violation: a utility class
+}
+]]>
+        </example>
+    </rule>
+
+    <rule name="AvoidPrivateAndProtectedMethods"
+          language="java"
+          message="Methods must be ''public'' or package-private, never ''private'' or ''protected''."
+          class="io.github.joke.pmd.rules.java.AvoidPrivateAndProtectedMethods"
+          externalInfoUrl="">
+        <description>
+The only legal method visibilities are `public` and package-private.
+
+A `private` method cannot be reached from a test, so it is only ever exercised through whatever
+public method calls it: a failure deep in the chain surfaces as a failure of the caller, and it
+cannot be stubbed when the caller is the thing you meant to test.
+
+`protected` is reachable but is the wrong seam. It widens the API to every subclass in every
+consumer's codebase, where package-private widens it only to the package the test lives in.
+Package-private also collides with nothing, while `protected` opposes PMD's own
+`AvoidProtectedMethodInFinalClassNotExtending` and `AvoidProtectedFieldInFinalClass`.
+
+Two legal forms and no middle ground is deliberate. The rule exists to remove discretion, and a
+third permitted form hands it back.
+
+Constructors are out of scope: you do not spy a constructor, and a private one is required both by
+`StaticMethodsModifyStaticState`'s utility-class exception and by PMD's `UseUtilityClass`. An
+`@Override` method is exempt, because Java forbids narrowing an inherited visibility and a framework
+superclass with a `protected` hook requires a `protected` override. A `static` method is left to
+`StaticMethodsModifyStaticState`, which reports it first — the rules cascade, so one method yields
+one violation at a time with one obvious fix.
+
+A genuine extension point is a `@SuppressWarnings` away, which is the intended escape. Reporting
+`protected` only when no subclass uses it is not possible: PMD analyses one compilation unit at a
+time, and that is a whole-module question.
+        </description>
+        <priority>3</priority>
+        <example>
+<![CDATA[
+public class Example {
+    private boolean check() { return true; }        // violation
+    protected boolean verify() { return true; }     // violation
+
+    boolean inspect() { return true; }              // no violation: package-private
+    public boolean isValid() { return true; }       // no violation: public API
+
+    private Example() { }                           // no violation: constructors are out of scope
+
+    @Override
+    protected void finalize() { }                   // no violation: visibility is not chosen here
+
+    @SuppressWarnings("PMD.AvoidPrivateAndProtectedMethods")
+    protected void extensionPoint() { }             // no violation: a deliberate, reviewed API
+}
+]]>
+        </example>
+    </rule>
+
+    <rule name="UseVisibleForTestingAnnotation"
+          language="java"
+          message="A package-private method must be annotated ''@VisibleForTesting''."
+          class="io.github.joke.pmd.rules.java.UseVisibleForTestingAnnotation"
+          externalInfoUrl="">
+        <description>
+A package-private method should carry `@VisibleForTesting`.
+
+`AvoidPrivateAndProtectedMethods` makes package-private the canonical form for an internal method.
+This rule makes the widened visibility read as a deliberate test seam rather than a forgotten
+modifier — which is the only reason the wider visibility was acceptable in the first place.
+
+The annotation is matched by **simple name**, so any declaration works: JetBrains, Guava, AndroidX
+and Elastic all ship a `VisibleForTesting` and all of them are markers. Matching on the name also
+avoids PMD's type resolution, which needs an `auxclasspath` that consumers frequently do not
+configure and which would make the rule silently pass when misconfigured.
+
+Only methods are in scope — fields, constructors and nested classes are not. `@Override` methods are
+exempt, and so are JUnit 5 test and lifecycle methods, which are conventionally package-private and
+for which the annotation would be nonsense.
+
+Note that a package-private method is stubbable only from a test in the same package and the same
+classloader. That holds for a standard Gradle layout and fails under JPMS with a sealed module.
+        </description>
+        <priority>3</priority>
+        <example>
+<![CDATA[
+public class Example {
+    boolean check() { return true; }                     // violation: an unmarked seam
+
+    @VisibleForTesting
+    boolean verify() { return true; }                    // no violation
+
+    public boolean isValid() { return true; }            // no violation: not package-private
+
+    @Override
+    void run() { }                                       // no violation: visibility is inherited
+
+    @Test
+    void reportsTheViolation() { }                       // no violation: a JUnit test method
+}
+]]>
+        </example>
+    </rule>
+
 </ruleset>

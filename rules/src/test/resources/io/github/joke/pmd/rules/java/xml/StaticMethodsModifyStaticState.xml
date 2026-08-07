@@ -1,0 +1,399 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<test-data
+        xmlns="http://pmd.sourceforge.net/rule-tests"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://pmd.sourceforge.net/rule-tests net/sourceforge/pmd/test/schema/rule-tests_1_0_0.xsd">
+
+    <test-code>
+        <description>a static helper is reported</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>2</expected-linenumbers>
+        <code><![CDATA[
+public class Example {
+    static String format(int n) { return "" + n; }
+    String keep() { return "x"; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>an instance method is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    String format(int n) { return "" + n; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a static factory returning the enclosing type is reported: a constructor is the compliant form</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>2</expected-linenumbers>
+        <code><![CDATA[
+public class Example {
+    static Example of(int x) { return new Example(); }
+    String value() { return "x"; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a static method assigning a private static field is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    private static String instance;
+
+    static void reset() { instance = null; }
+    String keep() { return "x"; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a compound assignment counts as a write</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    private static int count;
+
+    static void bump() { count += 1; }
+    String keep() { return "x"; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>an increment counts as a write</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    private static int count;
+
+    static void bump() { count++; }
+    String keep() { return "x"; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a decrement counts as a write</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    private static int count;
+
+    static void drop() { --count; }
+    String keep() { return "x"; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a static accessor over a private static field is reported: a read is not a write</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>4</expected-linenumbers>
+        <code><![CDATA[
+public class Example {
+    private static String instance;
+
+    static String get() { return instance; }
+    String keep() { return "x"; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a mutating call on a private static field is reported: put cannot be told from size</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>4</expected-linenumbers>
+        <code><![CDATA[
+public class Example {
+    private static final java.util.Map<String, String> REGISTRY = new java.util.HashMap<>();
+
+    static void register(String k, String v) { REGISTRY.put(k, v); }
+    String keep() { return "x"; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>writing a non-private static field is not an exception</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>4</expected-linenumbers>
+        <code><![CDATA[
+public class Example {
+    static int count;
+
+    static void bump() { count++; }
+    String keep() { return "x"; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>writing a private instance field through a receiver is not writing static state</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>4</expected-linenumbers>
+        <code><![CDATA[
+public class Example {
+    private int count;
+
+    static void set(Example target) { target.count = 1; }
+    String keep() { return "x"; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>writing a local variable that shadows the field is not writing the field</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>4</expected-linenumbers>
+        <code><![CDATA[
+public class Example {
+    private static int count;
+
+    static void compute() {
+        int count = 0;
+        count++;
+    }
+
+    String keep() { return "x"; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a static native method has no body and writes nothing</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>2</expected-linenumbers>
+        <code><![CDATA[
+public class Example {
+    static native void doIt();
+    String keep() { return "x"; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a sealed utility class is exempt</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+final class Utility {
+    private Utility() { }
+
+    static String format(int n) { return "" + n; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a public class with an implicit constructor is not a utility class</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>2</expected-linenumbers>
+        <code><![CDATA[
+public class Example {
+    static String format(int n) { return "" + n; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a package-private class with an implicit constructor is a utility class</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+class Example {
+    static String format(int n) { return "" + n; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a protected constructor disqualifies the type</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>4</expected-linenumbers>
+        <code><![CDATA[
+class Example {
+    protected Example() { }
+
+    static String format(int n) { return "" + n; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>one instance method disqualifies the type</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>4</expected-linenumbers>
+        <code><![CDATA[
+class Example {
+    private Example() { }
+
+    static String format(int n) { return "" + n; }
+    String keep() { return "x"; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>an instance field does not disqualify a utility class</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+class Example {
+    private Example() { }
+
+    private int unused;
+
+    static String format(int n) { return "" + n; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>an interface with only static methods is exempt: it has no constructor</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public interface Example {
+    static String format(int n) { return "" + n; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>an interface with a default method is not exempt</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>2</expected-linenumbers>
+        <code><![CDATA[
+public interface Example {
+    static String format(int n) { return "" + n; }
+
+    default String keep() { return "x"; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>an enum with no instance methods is exempt: its implicit constructor is private</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public enum Example {
+    A, B;
+
+    static String format(int n) { return "" + n; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>nested types are evaluated independently</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    String keep() { return "x"; }
+
+    static final class Nested {
+        private Nested() { }
+
+        static String format(int n) { return "" + n; }
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a main method is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    public static void main(String[] args) { }
+    String keep() { return "x"; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a method named main with a different signature is reported</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>2</expected-linenumbers>
+        <code><![CDATA[
+public class Example {
+    public static void main() { }
+    String keep() { return "x"; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a JUnit lifecycle method is not reported: JUnit requires it to be static</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    @BeforeAll
+    static void setUp() { }
+
+    @AfterAll
+    static void tearDown() { }
+
+    String keep() { return "x"; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a fully qualified lifecycle annotation is recognised too</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    @org.junit.jupiter.api.BeforeAll
+    static void setUp() { }
+
+    String keep() { return "x"; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a MethodSource provider is reported: nothing distinguishes it from any other static</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>2</expected-linenumbers>
+        <code><![CDATA[
+public class Example {
+    static java.util.stream.Stream<String> cases() { return java.util.stream.Stream.empty(); }
+
+    String keep() { return "x"; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>an unrelated annotation does not exempt a static helper</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>3</expected-linenumbers>
+        <code><![CDATA[
+public class Example {
+    @Deprecated
+    static String format(int n) { return "" + n; }
+
+    String keep() { return "x"; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>several static helpers in one class are each reported</description>
+        <expected-problems>2</expected-problems>
+        <expected-linenumbers>4,5</expected-linenumbers>
+        <code><![CDATA[
+public class Example {
+    private static int count;
+
+    static String format(int n) { return "" + n; }
+    static String render(int n) { return "" + n; }
+    static void bump() { count++; }
+    String keep() { return "x"; }
+}
+        ]]></code>
+    </test-code>
+
+</test-data>

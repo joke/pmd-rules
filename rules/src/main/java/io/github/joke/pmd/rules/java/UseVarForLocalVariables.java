@@ -1,6 +1,5 @@
 package io.github.joke.pmd.rules.java;
 
-import com.groupcdg.pitest.annotations.DoNotMutate;
 import java.util.List;
 import net.sourceforge.pmd.lang.java.ast.ASTArrayInitializer;
 import net.sourceforge.pmd.lang.java.ast.ASTExpression;
@@ -11,6 +10,7 @@ import net.sourceforge.pmd.lang.java.ast.ASTMethodReference;
 import net.sourceforge.pmd.lang.java.ast.ASTNullLiteral;
 import net.sourceforge.pmd.lang.java.ast.ASTVariableDeclarator;
 import net.sourceforge.pmd.lang.java.rule.AbstractJavaRulechainRule;
+import org.jetbrains.annotations.VisibleForTesting;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -35,28 +35,24 @@ public class UseVarForLocalVariables extends AbstractJavaRulechainRule {
     }
 
     /**
-     * Holds no logic of its own so that the mutation exemption below stays harmless: every decision
-     * lives in {@link #isRewritableAsVar}, which is mutated and tested normally.
-     *
-     * <p>Exempt because PMD discards a rulechain visitor's return value — replacing {@code data}
-     * with {@code null} changes nothing observable, and no test could ever kill that mutant.
-     * Constructing an AST node to assert the return directly is not possible either: PMD's parsing
-     * helpers live in a test-jar this project does not depend on.
+     * Holds no logic of its own: every decision lives in {@link #isRewritableAsVar}, which a test
+     * stubs on a spy to reach both branches here without parsing anything.
      */
     @Override
-    @DoNotMutate
     public Object visit(final ASTLocalVariableDeclaration node, final Object data) {
         reportIfRewritableAsVar(node, data);
         return data;
     }
 
-    private void reportIfRewritableAsVar(final ASTLocalVariableDeclaration node, final Object data) {
+    @VisibleForTesting
+    void reportIfRewritableAsVar(final ASTLocalVariableDeclaration node, final Object data) {
         if (isRewritableAsVar(node)) {
             asCtx(data).addViolation(node);
         }
     }
 
-    private static boolean isRewritableAsVar(final ASTLocalVariableDeclaration node) {
+    @VisibleForTesting
+    boolean isRewritableAsVar(final ASTLocalVariableDeclaration node) {
         if (node.isTypeInferred()) {
             return false;
         }
@@ -65,8 +61,8 @@ public class UseVarForLocalVariables extends AbstractJavaRulechainRule {
         return declarators.size() == ONE_DECLARATOR && declaresAnInferableType(node, declarators.get(0));
     }
 
-    private static boolean declaresAnInferableType(
-            final ASTLocalVariableDeclaration node, final ASTVariableDeclarator declarator) {
+    @VisibleForTesting
+    boolean declaresAnInferableType(final ASTLocalVariableDeclaration node, final ASTVariableDeclarator declarator) {
         // The variable of an enhanced for loop has no initializer of its own — the loop assigns it,
         // and `for (var s : names)` is legal — so it is decided before the initializer is examined.
         return node.getParent() instanceof ASTForeachStatement || isInferableInitializer(declarator.getInitializer());
@@ -77,7 +73,8 @@ public class UseVarForLocalVariables extends AbstractJavaRulechainRule {
      * {@code null} literal, or is one of the poly expressions that has no type without a target
      * type to give it one.
      */
-    private static boolean isInferableInitializer(final @Nullable ASTExpression initializer) {
+    @VisibleForTesting
+    boolean isInferableInitializer(final @Nullable ASTExpression initializer) {
         return initializer != null && UNINFERABLE_INITIALIZERS.stream().noneMatch(type -> type.isInstance(initializer));
     }
 }

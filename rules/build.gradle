@@ -38,6 +38,7 @@ dependencies {
     compileOnly 'net.sourceforge.pmd:pmd-core'
     compileOnly 'net.sourceforge.pmd:pmd-java'
     compileOnly 'org.jspecify:jspecify'
+    compileOnly 'org.jetbrains:annotations'
 
     testImplementation platform(project(':dependencies'))
     testImplementation 'net.sourceforge.pmd:pmd-core'
@@ -45,6 +46,11 @@ dependencies {
     testImplementation 'net.sourceforge.pmd:pmd-test'
     testImplementation 'org.assertj:assertj-core'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testImplementation 'org.mockito:mockito-core'
+
+    // The annotation is compileOnly on both source sets for the same reason: it is a marker, not a
+    // runtime dependency, and test code carries it for exactly the same rule.
+    testCompileOnly 'org.jetbrains:annotations'
 
     testRuntimeOnly platform(project(':dependencies'))
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

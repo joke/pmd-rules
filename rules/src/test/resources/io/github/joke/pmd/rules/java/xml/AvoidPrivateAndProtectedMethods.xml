@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<test-data
+        xmlns="http://pmd.sourceforge.net/rule-tests"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://pmd.sourceforge.net/rule-tests net/sourceforge/pmd/test/schema/rule-tests_1_0_0.xsd">
+
+    <test-code>
+        <description>a private method is reported</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>2</expected-linenumbers>
+        <code><![CDATA[
+public class Example {
+    private boolean check() { return true; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a protected method is reported</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>2</expected-linenumbers>
+        <code><![CDATA[
+public class Example {
+    protected boolean check() { return true; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a package-private method is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    boolean check() { return true; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a public method is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    public boolean check() { return true; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>an interface method is implicitly public and is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public interface Example {
+    String value();
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a private interface method is reported</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>4</expected-linenumbers>
+        <code><![CDATA[
+public interface Example {
+    String value();
+
+    private String helper() { return "x"; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a private constructor is not reported: constructors are out of scope</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    private Example() { }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a protected constructor is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    protected Example() { }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a protected override is not reported: visibility is fixed by the supertype</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    @Override
+    protected Object clone() throws CloneNotSupportedException { return super.clone(); }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a protected method without Override is reported</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>2</expected-linenumbers>
+        <code><![CDATA[
+public class Example {
+    protected void setUp() { }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a private static method is left to StaticMethodsModifyStaticState</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    private static boolean check() { return true; }
+    String keep() { return "x"; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a private static method in a utility class is reported by neither rule</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+final class Utility {
+    private Utility() { }
+
+    private static boolean check() { return true; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a protected method with a subclass in the same file is still reported</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>2</expected-linenumbers>
+        <code><![CDATA[
+public class Example {
+    protected void hook() { }
+
+    static final class Sub extends Example {
+        @Override
+        protected void hook() { }
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>suppression is available for a genuine extension point</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    @SuppressWarnings("PMD.AvoidPrivateAndProtectedMethods")
+    protected void extensionPoint() { }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>an unrelated annotation does not exempt a private method</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>3</expected-linenumbers>
+        <code><![CDATA[
+public class Example {
+    @Deprecated
+    private void check() { }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>several hidden methods in one class are each reported</description>
+        <expected-problems>2</expected-problems>
+        <expected-linenumbers>2,3</expected-linenumbers>
+        <code><![CDATA[
+public class Example {
+    private void a() { }
+    protected void b() { }
+    void c() { }
+    public void d() { }
+}
+        ]]></code>
+    </test-code>
+
+</test-data>

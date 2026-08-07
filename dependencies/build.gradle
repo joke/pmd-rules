@@ -18,6 +18,20 @@ dependencies {
         api 'org.codenarc:CodeNarc:3.7.0-groovy-4.0'
         api 'org.jspecify:jspecify:1.0.0'
 
+        // Supplies @VisibleForTesting, which UseVisibleForTestingAnnotation requires on every
+        // package-private method. compileOnly wherever it is used: the annotation is a marker for
+        // readers and for PMD, never needed at runtime, and the published POM declares no
+        // dependencies. The rule matches the annotation by simple name, so a consumer may use any
+        // of the four common declarations instead of this one.
+        api 'org.jetbrains:annotations:26.1.0'
+
+        // Spying the subject under test and stubbing its siblings is what the visibility rules
+        // exist to keep possible; without a mocking library they would create seams nothing uses.
+        // Mockito rather than Spock, because Spock means adding Groovy to a project that
+        // deliberately has none. Its default inline mock maker also mocks final methods, which is
+        // why no rule about `final` is needed.
+        api 'org.mockito:mockito-core:5.23.0'
+
         // The supported PMD floor. Rules compiled against the floor run on newer PMD; the reverse
         // throws NoSuchMethodError inside the consumer's analysis. Raising this is a decision to be
         // recorded in a change, never a side effect of a dependency update.

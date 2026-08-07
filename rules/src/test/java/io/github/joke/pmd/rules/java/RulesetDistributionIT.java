@@ -13,6 +13,7 @@ import net.sourceforge.pmd.lang.rule.Rule;
 import net.sourceforge.pmd.lang.rule.RuleSet;
 import net.sourceforge.pmd.reporting.Report;
 import net.sourceforge.pmd.reporting.RuleViolation;
+import org.jetbrains.annotations.VisibleForTesting;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -44,16 +45,20 @@ class RulesetDistributionIT {
     }
 
     @Test
-    void theRulesetShipsTheSeedRule() {
+    void theRulesetShipsEveryRule() {
         try (var pmd = PmdAnalysis.create(new PMDConfiguration())) {
             assertThat(ruleNames(pmd.newRuleSetLoader().loadFromResource(RULESET)))
-                    .contains("UseVarForLocalVariables");
+                    .contains(
+                            "UseVarForLocalVariables",
+                            "StaticMethodsModifyStaticState",
+                            "AvoidPrivateAndProtectedMethods",
+                            "UseVisibleForTestingAnnotation");
         }
     }
 
     @Test
     void aViolatingSourceFileIsReported(@TempDir final Path dir) throws IOException {
-        final var report = analyse(dir, "Bad", "class Bad { void m() { String name = \"joke\"; } }");
+        final var report = analyse(dir, "Bad", "class Bad { public void m() { String name = \"joke\"; } }");
 
         assertThat(report.getViolations()).singleElement().satisfies(violation -> assertThat(
                         violation.getRule().getName())
@@ -62,21 +67,22 @@ class RulesetDistributionIT {
 
     @Test
     void aCompliantSourceFileIsNotReported(@TempDir final Path dir) throws IOException {
-        final var report = analyse(dir, "Good", "class Good { void m() { var name = \"joke\"; } }");
+        final var report = analyse(dir, "Good", "class Good { public void m() { var name = \"joke\"; } }");
 
         assertThat(report.getViolations()).isEmpty();
     }
 
     @Test
     void theViolationCarriesTheConfiguredMessage(@TempDir final Path dir) throws IOException {
-        final var report = analyse(dir, "Bad", "class Bad { void m() { String name = \"joke\"; } }");
+        final var report = analyse(dir, "Bad", "class Bad { public void m() { String name = \"joke\"; } }");
 
         assertThat(report.getViolations())
                 .extracting(RuleViolation::getDescription)
                 .containsExactly("Use 'var' instead of an explicit local variable type.");
     }
 
-    private static Report analyse(final Path dir, final String name, final String source) throws IOException {
+    @VisibleForTesting
+    Report analyse(final Path dir, final String name, final String source) throws IOException {
         final var file = Files.write(dir.resolve(name + ".java"), List.of(source));
         final var configuration = new PMDConfiguration();
         configuration.addInputPath(file);
@@ -86,7 +92,8 @@ class RulesetDistributionIT {
         }
     }
 
-    private static List<String> ruleNames(final RuleSet ruleset) {
+    @VisibleForTesting
+    List<String> ruleNames(final RuleSet ruleset) {
         return ruleset.getRules().stream().map(Rule::getName).collect(Collectors.toList());
     }
 }

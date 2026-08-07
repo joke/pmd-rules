@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<test-data
+        xmlns="http://pmd.sourceforge.net/rule-tests"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://pmd.sourceforge.net/rule-tests net/sourceforge/pmd/test/schema/rule-tests_1_0_0.xsd">
+
+    <test-code>
+        <description>an unannotated package-private method is reported</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>2</expected-linenumbers>
+        <code><![CDATA[
+public class Example {
+    boolean check() { return true; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>an annotated package-private method is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    @VisibleForTesting
+    boolean check() { return true; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>the JetBrains annotation is recognised</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    @org.jetbrains.annotations.VisibleForTesting
+    boolean check() { return true; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>the Guava annotation is recognised</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    @com.google.common.annotations.VisibleForTesting
+    boolean check() { return true; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a different annotation is not recognised</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>3</expected-linenumbers>
+        <code><![CDATA[
+public class Example {
+    @Deprecated
+    boolean check() { return true; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a public method is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    public boolean check() { return true; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a private method is not reported: AvoidPrivateAndProtectedMethods owns that case</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    private boolean check() { return true; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a protected method is not reported: AvoidPrivateAndProtectedMethods owns that case too</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    protected boolean check() { return true; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a package-private field is not reported: only methods are in scope</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    String name;
+    static int count;
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a package-private constructor is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    Example() { }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a package-private nested class is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    static class Nested { }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a package-private override is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+class Base {
+    @VisibleForTesting
+    void hook() { }
+}
+
+public class Example extends Base {
+    @Override
+    void hook() { }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a JUnit test method is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+class ExampleTest {
+    @Test
+    void reportsTheViolation() { }
+
+    @ParameterizedTest
+    void handlesEachCase() { }
+
+    @RepeatedTest(2)
+    void staysStable() { }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>JUnit lifecycle methods are not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+class ExampleTest {
+    @BeforeEach
+    void setUp() { }
+
+    @AfterEach
+    void tearDown() { }
+
+    @BeforeAll
+    static void beforeAll() { }
+
+    @AfterAll
+    static void afterAll() { }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a TestFactory and a TestTemplate are not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+class ExampleTest {
+    @TestFactory
+    java.util.stream.Stream<Object> makes() { return java.util.stream.Stream.empty(); }
+
+    @TestTemplate
+    void templated() { }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>an unannotated helper in a test class is reported</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>5</expected-linenumbers>
+        <code><![CDATA[
+class ExampleTest {
+    @Test
+    void reportsTheViolation() { }
+
+    String fixture() { return "x"; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>an interface method is implicitly public and is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public interface Example {
+    String value();
+
+    static String format(int n) { return "" + n; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a package-private static method is still an unmarked seam</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>4</expected-linenumbers>
+        <code><![CDATA[
+final class Utility {
+    private Utility() { }
+
+    static String format(int n) { return "" + n; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>several unmarked seams in one class are each reported</description>
+        <expected-problems>2</expected-problems>
+        <expected-linenumbers>2,3</expected-linenumbers>
+        <code><![CDATA[
+public class Example {
+    boolean a() { return true; }
+    boolean b() { return true; }
+
+    @VisibleForTesting
+    boolean c() { return true; }
+
+    public boolean d() { return true; }
+}
+        ]]></code>
+    </test-code>
+
+</test-data>
