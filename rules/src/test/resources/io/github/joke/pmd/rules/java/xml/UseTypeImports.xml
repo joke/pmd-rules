@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<test-data
+        xmlns="http://pmd.sourceforge.net/rule-tests"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://pmd.sourceforge.net/rule-tests net/sourceforge/pmd/test/schema/rule-tests_1_0_0.xsd">
+
+    <test-code>
+        <description>a fully-qualified type in a declaration is reported</description>
+        <expected-problems>1</expected-problems>
+        <code><![CDATA[
+public class Example {
+    private java.util.List<String> names;
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a fully-qualified type in a generic argument is reported</description>
+        <expected-problems>1</expected-problems>
+        <code><![CDATA[
+import java.util.Map;
+
+public class Example {
+    private Map<String, java.time.Duration> timings;
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a fully-qualified return type is reported</description>
+        <expected-problems>1</expected-problems>
+        <code><![CDATA[
+public class Example {
+    java.time.Duration m() {
+        return null;
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a simple name already imported is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+import java.util.List;
+
+public class Example {
+    private List<String> names;
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>an import declaration is not itself reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+import java.util.List;
+import java.util.Map;
+
+public class Example {
+    private List<String> names;
+    private Map<String, String> pairs;
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a java.lang type is left to the stock rule</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    void m() {
+        java.lang.String name = "joke";
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a redundantly qualified imported type is left to the stock rule</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+import java.util.List;
+
+public class Example {
+    private java.util.List<String> names;
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>two types with the same simple name are both left alone</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    private java.util.List<String> names;
+    private java.awt.List widget;
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a qualified type colliding with an existing import is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+import java.util.List;
+
+public class Example {
+    private List<String> names;
+    private java.awt.List widget;
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>repeated use of one qualified type yields one violation</description>
+        <expected-problems>1</expected-problems>
+        <code><![CDATA[
+public class Example {
+    private java.time.Duration a;
+    private java.time.Duration b;
+    private java.time.Duration c;
+
+    java.time.Duration m(java.time.Duration d) {
+        return d;
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>two qualified types yield two violations</description>
+        <expected-problems>2</expected-problems>
+        <code><![CDATA[
+public class Example {
+    private java.time.Duration duration;
+    private java.time.Instant instant;
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a qualified nested type is reported</description>
+        <expected-problems>1</expected-problems>
+        <code><![CDATA[
+public class Example {
+    void m(java.util.Map.Entry<String, String> entry) { }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a nested type reached through an imported outer type is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+import java.util.Map;
+
+public class Example {
+    void m(Map.Entry<String, String> entry) { }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a fully-qualified supertype is reported</description>
+        <expected-problems>1</expected-problems>
+        <code><![CDATA[
+public class Example extends java.util.ArrayList<String> {
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a fully-qualified annotation is reported</description>
+        <expected-problems>1</expected-problems>
+        <code><![CDATA[
+@java.lang.annotation.Documented
+@interface Marker { }
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a type in the current package is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+package com.example;
+
+public class Example {
+    private com.example.Helper helper;
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a type in another package is reported even when a package is declared</description>
+        <expected-problems>1</expected-problems>
+        <code><![CDATA[
+package com.example;
+
+public class Example {
+    private java.time.Duration timeout;
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a static import does not bind a simple name for type resolution</description>
+        <expected-problems>1</expected-problems>
+        <code><![CDATA[
+import static java.util.Collections.emptyList;
+
+public class Example {
+    private java.time.Duration timeout;
+
+    Object m() {
+        return emptyList();
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a static import of the same simple name does not put a type in scope</description>
+        <expected-problems>1</expected-problems>
+        <code><![CDATA[
+import static com.example.Holder.Duration;
+
+public class Example {
+    private java.time.Duration timeout;
+
+    Object m() {
+        return Duration;
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>suppression is available at the site</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    @SuppressWarnings("PMD.UseTypeImports")
+    private java.util.List<String> names;
+}
+        ]]></code>
+    </test-code>
+
+</test-data>

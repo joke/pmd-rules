@@ -1,11 +1,15 @@
 package io.github.joke.pmd.rules.java;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
 import net.sourceforge.pmd.lang.java.ast.ASTAnonymousClassDeclaration;
+import net.sourceforge.pmd.lang.java.ast.ASTCompilationUnit;
 import net.sourceforge.pmd.lang.java.ast.ASTLambdaExpression;
 import net.sourceforge.pmd.lang.java.ast.ASTLocalVariableDeclaration;
 import net.sourceforge.pmd.lang.java.ast.ASTMethodDeclaration;
@@ -14,7 +18,6 @@ import net.sourceforge.pmd.reporting.RuleContext;
 import org.jetbrains.annotations.VisibleForTesting;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
 /**
  * Covers each rule's {@code visit} in isolation from the decision it delegates to, which the {@code
@@ -38,12 +41,13 @@ class VisitDelegationTest {
     private final ASTMethodDeclaration method = mock(ASTMethodDeclaration.class);
     private final ASTLambdaExpression lambda = mock(ASTLambdaExpression.class);
     private final ASTAnonymousClassDeclaration anonymousClass = mock(ASTAnonymousClassDeclaration.class);
+    private final ASTCompilationUnit unit = mock(ASTCompilationUnit.class);
 
     @Test
     void useVarForLocalVariablesReportsARewritableDeclaration() {
         final var rule = spy(new UseVarForLocalVariables());
         final var context = contextFor(rule);
-        Mockito.doReturn(true).when(rule).isRewritableAsVar(declaration);
+        doReturn(true).when(rule).isRewritableAsVar(declaration);
 
         rule.visit(declaration, context);
 
@@ -54,18 +58,18 @@ class VisitDelegationTest {
     void useVarForLocalVariablesReportsNothingOtherwise() {
         final var rule = spy(new UseVarForLocalVariables());
         final var context = contextFor(rule);
-        Mockito.doReturn(false).when(rule).isRewritableAsVar(declaration);
+        doReturn(false).when(rule).isRewritableAsVar(declaration);
 
         rule.visit(declaration, context);
 
-        verify(context, Mockito.never()).addViolation(declaration);
+        verify(context, never()).addViolation(declaration);
     }
 
     @Test
     void useVarForLocalVariablesReturnsTheDataItWasGiven() {
         final var rule = spy(new UseVarForLocalVariables());
         final var context = contextFor(rule);
-        Mockito.doReturn(false).when(rule).isRewritableAsVar(declaration);
+        doReturn(false).when(rule).isRewritableAsVar(declaration);
 
         assertThat(rule.visit(declaration, context)).isSameAs(context);
     }
@@ -74,7 +78,7 @@ class VisitDelegationTest {
     void staticMethodsModifyStaticStateReportsAnUnjustifiedStatic() {
         final var rule = spy(new StaticMethodsModifyStaticState());
         final var context = contextFor(rule);
-        Mockito.doReturn(true).when(rule).isUnjustifiedStatic(method);
+        doReturn(true).when(rule).isUnjustifiedStatic(method);
 
         rule.visit(method, context);
 
@@ -85,18 +89,18 @@ class VisitDelegationTest {
     void staticMethodsModifyStaticStateReportsNothingOtherwise() {
         final var rule = spy(new StaticMethodsModifyStaticState());
         final var context = contextFor(rule);
-        Mockito.doReturn(false).when(rule).isUnjustifiedStatic(method);
+        doReturn(false).when(rule).isUnjustifiedStatic(method);
 
         rule.visit(method, context);
 
-        verify(context, Mockito.never()).addViolation(method);
+        verify(context, never()).addViolation(method);
     }
 
     @Test
     void staticMethodsModifyStaticStateReturnsTheDataItWasGiven() {
         final var rule = spy(new StaticMethodsModifyStaticState());
         final var context = contextFor(rule);
-        Mockito.doReturn(false).when(rule).isUnjustifiedStatic(method);
+        doReturn(false).when(rule).isUnjustifiedStatic(method);
 
         assertThat(rule.visit(method, context)).isSameAs(context);
     }
@@ -105,7 +109,7 @@ class VisitDelegationTest {
     void avoidPrivateAndProtectedMethodsReportsAHiddenMethod() {
         final var rule = spy(new AvoidPrivateAndProtectedMethods());
         final var context = contextFor(rule);
-        Mockito.doReturn(true).when(rule).isHidden(method);
+        doReturn(true).when(rule).isHidden(method);
 
         rule.visit(method, context);
 
@@ -116,18 +120,18 @@ class VisitDelegationTest {
     void avoidPrivateAndProtectedMethodsReportsNothingOtherwise() {
         final var rule = spy(new AvoidPrivateAndProtectedMethods());
         final var context = contextFor(rule);
-        Mockito.doReturn(false).when(rule).isHidden(method);
+        doReturn(false).when(rule).isHidden(method);
 
         rule.visit(method, context);
 
-        verify(context, Mockito.never()).addViolation(method);
+        verify(context, never()).addViolation(method);
     }
 
     @Test
     void avoidPrivateAndProtectedMethodsReturnsTheDataItWasGiven() {
         final var rule = spy(new AvoidPrivateAndProtectedMethods());
         final var context = contextFor(rule);
-        Mockito.doReturn(false).when(rule).isHidden(method);
+        doReturn(false).when(rule).isHidden(method);
 
         assertThat(rule.visit(method, context)).isSameAs(context);
     }
@@ -136,7 +140,7 @@ class VisitDelegationTest {
     void useVisibleForTestingAnnotationReportsAnUnmarkedSeam() {
         final var rule = spy(new UseVisibleForTestingAnnotation());
         final var context = contextFor(rule);
-        Mockito.doReturn(true).when(rule).isUnmarkedSeam(method);
+        doReturn(true).when(rule).isUnmarkedSeam(method);
 
         rule.visit(method, context);
 
@@ -147,18 +151,18 @@ class VisitDelegationTest {
     void useVisibleForTestingAnnotationReportsNothingOtherwise() {
         final var rule = spy(new UseVisibleForTestingAnnotation());
         final var context = contextFor(rule);
-        Mockito.doReturn(false).when(rule).isUnmarkedSeam(method);
+        doReturn(false).when(rule).isUnmarkedSeam(method);
 
         rule.visit(method, context);
 
-        verify(context, Mockito.never()).addViolation(method);
+        verify(context, never()).addViolation(method);
     }
 
     @Test
     void useVisibleForTestingAnnotationReturnsTheDataItWasGiven() {
         final var rule = spy(new UseVisibleForTestingAnnotation());
         final var context = contextFor(rule);
-        Mockito.doReturn(false).when(rule).isUnmarkedSeam(method);
+        doReturn(false).when(rule).isUnmarkedSeam(method);
 
         assertThat(rule.visit(method, context)).isSameAs(context);
     }
@@ -167,7 +171,7 @@ class VisitDelegationTest {
     void avoidLambdaBlockBodiesReportsABlockBody() {
         final var rule = spy(new AvoidLambdaBlockBodies());
         final var context = contextFor(rule);
-        Mockito.doReturn(true).when(rule).hasExtractableBlockBody(lambda);
+        doReturn(true).when(rule).hasExtractableBlockBody(lambda);
 
         rule.visit(lambda, context);
 
@@ -178,18 +182,18 @@ class VisitDelegationTest {
     void avoidLambdaBlockBodiesReportsNothingOtherwise() {
         final var rule = spy(new AvoidLambdaBlockBodies());
         final var context = contextFor(rule);
-        Mockito.doReturn(false).when(rule).hasExtractableBlockBody(lambda);
+        doReturn(false).when(rule).hasExtractableBlockBody(lambda);
 
         rule.visit(lambda, context);
 
-        verify(context, Mockito.never()).addViolation(lambda);
+        verify(context, never()).addViolation(lambda);
     }
 
     @Test
     void avoidLambdaBlockBodiesReturnsTheDataItWasGiven() {
         final var rule = spy(new AvoidLambdaBlockBodies());
         final var context = contextFor(rule);
-        Mockito.doReturn(false).when(rule).hasExtractableBlockBody(lambda);
+        doReturn(false).when(rule).hasExtractableBlockBody(lambda);
 
         assertThat(rule.visit(lambda, context)).isSameAs(context);
     }
@@ -198,7 +202,7 @@ class VisitDelegationTest {
     void avoidAnonymousClassesReportsABodyHoldingLogic() {
         final var rule = spy(new AvoidAnonymousClasses());
         final var context = contextFor(rule);
-        Mockito.doReturn(true).when(rule).hasExtractableBody(anonymousClass);
+        doReturn(true).when(rule).hasExtractableBody(anonymousClass);
 
         rule.visit(anonymousClass, context);
 
@@ -209,20 +213,60 @@ class VisitDelegationTest {
     void avoidAnonymousClassesReportsNothingOtherwise() {
         final var rule = spy(new AvoidAnonymousClasses());
         final var context = contextFor(rule);
-        Mockito.doReturn(false).when(rule).hasExtractableBody(anonymousClass);
+        doReturn(false).when(rule).hasExtractableBody(anonymousClass);
 
         rule.visit(anonymousClass, context);
 
-        verify(context, Mockito.never()).addViolation(anonymousClass);
+        verify(context, never()).addViolation(anonymousClass);
     }
 
     @Test
     void avoidAnonymousClassesReturnsTheDataItWasGiven() {
         final var rule = spy(new AvoidAnonymousClasses());
         final var context = contextFor(rule);
-        Mockito.doReturn(false).when(rule).hasExtractableBody(anonymousClass);
+        doReturn(false).when(rule).hasExtractableBody(anonymousClass);
 
         assertThat(rule.visit(anonymousClass, context)).isSameAs(context);
+    }
+
+    @Test
+    void useStaticImportsDelegatesToItsCollector() {
+        final var rule = spy(new UseStaticImports());
+        final var context = contextFor(rule);
+        doNothing().when(rule).reportImportableMembers(unit, context);
+
+        rule.visit(unit, context);
+
+        verify(rule).reportImportableMembers(unit, context);
+    }
+
+    @Test
+    void useStaticImportsReturnsTheDataItWasGiven() {
+        final var rule = spy(new UseStaticImports());
+        final var context = contextFor(rule);
+        doNothing().when(rule).reportImportableMembers(unit, context);
+
+        assertThat(rule.visit(unit, context)).isSameAs(context);
+    }
+
+    @Test
+    void useTypeImportsDelegatesToItsCollector() {
+        final var rule = spy(new UseTypeImports());
+        final var context = contextFor(rule);
+        doNothing().when(rule).reportImportableTypes(unit, context);
+
+        rule.visit(unit, context);
+
+        verify(rule).reportImportableTypes(unit, context);
+    }
+
+    @Test
+    void useTypeImportsReturnsTheDataItWasGiven() {
+        final var rule = spy(new UseTypeImports());
+        final var context = contextFor(rule);
+        doNothing().when(rule).reportImportableTypes(unit, context);
+
+        assertThat(rule.visit(unit, context)).isSameAs(context);
     }
 
     /**

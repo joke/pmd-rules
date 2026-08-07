@@ -20,6 +20,12 @@
         <exclude name="ShortVariable"/>
         <exclude name="UseExplicitTypes"/>
         <exclude name="AtLeastOneConstructor"/>
+        <!-- In direct opposition to UseStaticImports, which this project publishes: that rule only
+             ever adds static imports and this one caps them at four, so no configuration satisfies
+             both. Imports are cheap and the IDE folds them away; a cap buys nothing and costs the
+             readability it claims to protect. Consumers enabling this category alongside
+             rulesets/java/joke.xml need the same exclusion. -->
+        <exclude name="TooManyStaticImports"/>
     </rule>
 
     <rule ref="category/java/design.xml">

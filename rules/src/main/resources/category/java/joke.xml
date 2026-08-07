@@ -343,4 +343,124 @@ enum Op {
         </example>
     </rule>
 
+    <rule name="UseStaticImports"
+          language="java"
+          minimumLanguageVersion="1.5"
+          message="Statically import ''{0}'' instead of qualifying it with its type."
+          class="io.github.joke.pmd.rules.java.UseStaticImports"
+          externalInfoUrl="">
+        <description>
+A static member reached through its declaring type should be statically imported. The import carries
+the owner; the code should not repeat it on every use.
+
+**The threshold is a floor, not a ceiling.** This rule only ever says "import this". It never reports
+an import as unnecessary and never stops you importing a shorter name by hand, so anything below the
+floor is simply your call. A report you disagree with is a `@SuppressWarnings` away.
+
+A member is reported when its simple name is longer than three characters, is not in the exclusion
+list, and is not contributed by two different types in the same file. Short names are left alone
+because the short static members of the JDK are overwhelmingly the ambiguous ones — `of`, `get`,
+`min`, `max`, `now`, `abs`, `sum`.
+
+Ambiguity between owners is handled structurally, not by the exclusion list. If a file uses both
+`Arrays.copyOf` and `List.copyOf`, neither is reported and you may import one, the other, or neither.
+If it uses only one, the bare name is unambiguous in that file and the import line names the owner.
+
+The exclusion list is therefore only about *uninformative* names — factory-shaped members where the
+member name says what it produces but not of what, leaving the class as the only thing carrying the
+type. Self-describing members such as `unmodifiableList`, `toList` and `groupingBy` are deliberately
+absent, and are reported.
+
+Excluded exactly: `value`, `values`, `valueOf`, `from`, `empty`, `create`, `builder`, `parse`, `now`,
+`between`, `getInstance`, `newInstance`, `INSTANCE`. Excluded by prefix at a camelCase boundary:
+`of…` and `from…`, so `ofSeconds` is excluded while `offer` is not. The list is fixed; suppress at
+the site for your own factory methods.
+
+Violations are reported once per member per file, not once per occurrence, because one import fixes
+them all.
+
+**This rule is incompatible with PMD's `TooManyStaticImports`**, which caps static imports at four.
+No configuration satisfies both. If you enable `category/java/codestyle.xml`, exclude that rule.
+        </description>
+        <priority>3</priority>
+        <example>
+<![CDATA[
+public class Example {
+    void bad() {
+        Mockito.doReturn(true);              // violation: import static …Mockito.doReturn
+        Collections.unmodifiableList(xs);    // violation: self-describing, so not excluded
+        Collectors.toList();                 // violation
+        AccessType.WRITE.name();             // violation: fields count too
+    }
+
+    void good() {
+        doReturn(true);                      // statically imported
+        Math.max(a, b);                      // no violation: 3 characters, under the floor
+        Optional.empty();                    // no violation: empty what?
+        Duration.ofSeconds(3);               // no violation: of[A-Z] prefix
+        Registry.INSTANCE.lookup();          // no violation: instance of what?
+        Example.class.getName();             // no violation: a class literal cannot be imported
+    }
+
+    void conflicting(int[] a, java.util.List<String> xs) {
+        Arrays.copyOf(a, 2);                 // no violation: two owners of `copyOf` in one file,
+        List.copyOf(xs);                     // so the developer chooses one, or neither
+    }
+}
+]]>
+        </example>
+    </rule>
+
+    <rule name="UseTypeImports"
+          language="java"
+          message="Import ''{0}'' instead of writing it fully qualified."
+          class="io.github.joke.pmd.rules.java.UseTypeImports"
+          externalInfoUrl="">
+        <description>
+A fully-qualified type name used in code should be an import. The import carries the package; the
+code should not repeat it on every mention.
+
+This does **not** overlap with PMD's stock `UnnecessaryFullyQualifiedName`, which sounds like it
+covers the same ground and does not. That rule fires only when the simple name is *already* in scope,
+and its fix is to drop the qualifier. Write `java.util.List` with no import and it says nothing,
+because the fix there is to add one. The two partition the space:
+
+    simple name already in scope   -> UnnecessaryFullyQualifiedName (stock)   "drop the qualifier"
+    simple name not yet in scope   -> UseTypeImports (this rule)              "add an import"
+
+So this rule stays silent on anything reachable through `java.lang`, through the current package, or
+through an existing import, and a project enabling both never gets two reports for one name.
+
+If two types in one file want the same simple name, only one of them can be imported — the rule
+reports neither and leaves the choice to you.
+
+A qualified nested type such as `java.util.Map.Entry` is reported without prescribing which of the
+two valid fixes to apply: import the nested type and write `Entry`, or import the outer type and
+write `Map.Entry`.
+
+Violations are reported once per qualified name per file, not once per mention, because one import
+fixes them all.
+        </description>
+        <priority>3</priority>
+        <example>
+<![CDATA[
+public class Example {
+    private java.util.List<String> bad;         // violation: add an import
+    private java.time.Duration alsoBad;         // violation
+
+    void m(java.util.Map.Entry<String, String> e) { }   // violation: nested type, either import works
+}
+
+import java.util.List;
+
+public class Good {
+    private List<String> names;                 // no violation
+    private String text;                        // no violation: java.lang is already in scope
+
+    void m(java.awt.List awtList) { }           // no violation: `List` is taken, so you choose
+}
+]]>
+        </example>
+    </rule>
+
 </ruleset>

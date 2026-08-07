@@ -1,14 +1,15 @@
 package io.github.joke.pmd.rules.java;
 
-import java.lang.reflect.Modifier;
+import static java.lang.reflect.Modifier.isPrivate;
+import static net.sourceforge.pmd.lang.java.ast.ASTAssignableExpr.AccessType.WRITE;
+import static net.sourceforge.pmd.lang.java.ast.ModifierOwner.Visibility.V_PROTECTED;
+
 import java.util.Set;
 import net.sourceforge.pmd.lang.java.ast.ASTAssignableExpr.ASTNamedReferenceExpr;
-import net.sourceforge.pmd.lang.java.ast.ASTAssignableExpr.AccessType;
 import net.sourceforge.pmd.lang.java.ast.ASTConstructorDeclaration;
 import net.sourceforge.pmd.lang.java.ast.ASTMethodDeclaration;
 import net.sourceforge.pmd.lang.java.ast.ASTTypeDeclaration;
 import net.sourceforge.pmd.lang.java.ast.Annotatable;
-import net.sourceforge.pmd.lang.java.ast.ModifierOwner.Visibility;
 import net.sourceforge.pmd.lang.java.rule.AbstractJavaRulechainRule;
 import net.sourceforge.pmd.lang.java.symbols.JFieldSymbol;
 import net.sourceforge.pmd.lang.java.symbols.JVariableSymbol;
@@ -116,12 +117,12 @@ public class StaticMethodsModifyStaticState extends AbstractJavaRulechainRule {
      */
     @VisibleForTesting
     boolean hasInaccessibleImplicitConstructor(final ASTTypeDeclaration type) {
-        return type.isInterface() || type.isEnum() || !type.getVisibility().isAtLeast(Visibility.V_PROTECTED);
+        return type.isInterface() || type.isEnum() || !type.getVisibility().isAtLeast(V_PROTECTED);
     }
 
     @VisibleForTesting
     boolean isAccessible(final ASTConstructorDeclaration constructor) {
-        return constructor.getVisibility().isAtLeast(Visibility.V_PROTECTED);
+        return constructor.getVisibility().isAtLeast(V_PROTECTED);
     }
 
     /**
@@ -137,7 +138,7 @@ public class StaticMethodsModifyStaticState extends AbstractJavaRulechainRule {
 
     @VisibleForTesting
     boolean isWriteToPrivateStaticField(final ASTNamedReferenceExpr access) {
-        return access.getAccessType() == AccessType.WRITE && isPrivateStaticField(access.getReferencedSym());
+        return access.getAccessType() == WRITE && isPrivateStaticField(access.getReferencedSym());
     }
 
     /**
@@ -150,6 +151,6 @@ public class StaticMethodsModifyStaticState extends AbstractJavaRulechainRule {
             return false;
         }
         final var field = (JFieldSymbol) symbol;
-        return field.isStatic() && Modifier.isPrivate(field.getModifiers());
+        return field.isStatic() && isPrivate(field.getModifiers());
     }
 }

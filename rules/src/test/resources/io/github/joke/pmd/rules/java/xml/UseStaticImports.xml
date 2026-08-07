@@ -1,0 +1,306 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<test-data
+        xmlns="http://pmd.sourceforge.net/rule-tests"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://pmd.sourceforge.net/rule-tests net/sourceforge/pmd/test/schema/rule-tests_1_0_0.xsd">
+
+    <test-code>
+        <description>a type-qualified static method is reported</description>
+        <expected-problems>1</expected-problems>
+        <code><![CDATA[
+import java.util.Collections;
+
+public class Example {
+    Object m(java.util.List<String> xs) {
+        return Collections.unmodifiableList(xs);
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a type-qualified static field is reported</description>
+        <expected-problems>1</expected-problems>
+        <code><![CDATA[
+import java.math.BigDecimal;
+
+public class Example {
+    BigDecimal m() {
+        return BigDecimal.ZERO;
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>an instance method call is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    int m(String text) {
+        return text.length();
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a member already used through a static import is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+import static java.util.Collections.unmodifiableList;
+
+public class Example {
+    Object m(java.util.List<String> xs) {
+        return unmodifiableList(xs);
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a three-character member is not reported: under the floor</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    int m(int a, int b) {
+        return Math.max(a, b);
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a four-character member is reported</description>
+        <expected-problems>1</expected-problems>
+        <code><![CDATA[
+public class Example {
+    double m(double x) {
+        return Math.sqrt(x);
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>an excluded exact name is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+import java.util.Optional;
+
+public class Example {
+    Optional<String> m() {
+        return Optional.empty();
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>an excluded prefix is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+import java.time.Duration;
+
+public class Example {
+    Duration m() {
+        return Duration.ofSeconds(3);
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>the INSTANCE field is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+import com.example.Registry;
+
+public class Example {
+    Object m() {
+        return Registry.INSTANCE;
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a camelCase boundary is required for a prefix match: offer is not of[A-Z]</description>
+        <expected-problems>1</expected-problems>
+        <code><![CDATA[
+import com.example.Helper;
+
+public class Example {
+    boolean m() {
+        return Helper.offer("x");
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a member whose owner is declared in the same file is treated as shadowed</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    boolean m() {
+        return Helper.offer("x");
+    }
+}
+
+class Helper {
+    static boolean offer(String s) { return true; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>Collectors members are reported: they are self-describing, not uninformative</description>
+        <expected-problems>1</expected-problems>
+        <code><![CDATA[
+import java.util.stream.Collectors;
+
+public class Example {
+    Object m(java.util.stream.Stream<String> s) {
+        return s.collect(Collectors.toList());
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>two owners of the same simple name are both left alone</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+import java.util.Arrays;
+import java.util.List;
+
+public class Example {
+    void m(int[] a, List<String> xs) {
+        Arrays.copyOf(a, 2);
+        List.copyOf(xs);
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a single owner of that name is reported</description>
+        <expected-problems>1</expected-problems>
+        <code><![CDATA[
+import java.util.Arrays;
+
+public class Example {
+    void m(int[] a) {
+        Arrays.copyOf(a, 2);
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a name shadowed by a local declaration is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    double m(double x) {
+        double sqrt = 0;
+        return Math.sqrt(x) + sqrt;
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a name shadowed by a method of the enclosing type is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    double m(double x) {
+        return Math.sqrt(x);
+    }
+
+    double sqrt(double x) { return x; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a class literal is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    String m() {
+        return Example.class.getName();
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>repeated use of one member yields one violation</description>
+        <expected-problems>1</expected-problems>
+        <code><![CDATA[
+public class Example {
+    double m(double x) {
+        double a = Math.sqrt(x);
+        double b = Math.sqrt(a);
+        double c = Math.sqrt(b);
+        return Math.sqrt(c);
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>two members of the same type yield two violations</description>
+        <expected-problems>2</expected-problems>
+        <code><![CDATA[
+public class Example {
+    double m(double x) {
+        return Math.sqrt(x) + Math.floor(x);
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>suppression is available at the site</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Example {
+    @SuppressWarnings("PMD.UseStaticImports")
+    double m(double x) {
+        return Math.sqrt(x);
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>the rule is skipped below Java 5, where static imports do not exist</description>
+        <expected-problems>0</expected-problems>
+        <source-type>java 1.4</source-type>
+        <code><![CDATA[
+public class Example {
+    double m(double x) {
+        return Math.sqrt(x);
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>the rule applies from Java 5</description>
+        <expected-problems>1</expected-problems>
+        <source-type>java 1.5</source-type>
+        <code><![CDATA[
+public class Example {
+    double m(double x) {
+        return Math.sqrt(x);
+    }
+}
+        ]]></code>
+    </test-code>
+
+</test-data>

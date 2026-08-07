@@ -299,6 +299,94 @@ report every strategy enum — which has no anonymous-free rewrite that keeps th
 class declared inside a method *of* an enum is still reported; only the constant's own body is
 exempt.
 
+### UseStaticImports
+
+Reports a static member — method or field — reached through its declaring type. The import carries
+the owner; the code should not repeat it on every use.
+
+> **If you enable `category/java/codestyle.xml`, you must exclude `TooManyStaticImports`.** It caps
+> static imports at four by default, and this rule only ever adds them. No configuration satisfies
+> both. This is the one rule here that fights a stock rule rather than composing with it.
+>
+> ```xml
+> <rule ref="category/java/codestyle.xml">
+>     <exclude name="TooManyStaticImports"/>
+> </rule>
+> ```
+
+**The threshold is a floor, not a ceiling.** The rule only ever says "import this". It never reports
+an import as unnecessary and never stops you importing a shorter name by hand, so anything below the
+floor is simply your call, and a report you disagree with is a `@SuppressWarnings` away.
+
+```java
+Mockito.doReturn(true)             // reported: 8 characters
+Collections.unmodifiableList(xs)   // reported: self-describing, so not excluded
+Collectors.toList()                // reported
+AccessType.WRITE                   // reported: fields count too
+
+Math.max(a, b)                     // not reported: 3 characters, under the floor
+Optional.empty()                   // not reported: empty what?
+Duration.ofSeconds(3)              // not reported: of[A-Z] prefix
+Registry.INSTANCE                  // not reported: instance of what?
+Example.class.getName()            // not reported: a class literal cannot be imported
+```
+
+Short names are left alone because the short static members of the JDK are overwhelmingly the
+ambiguous ones — `of`, `get`, `min`, `max`, `now`, `abs`, `sum`.
+
+**Ambiguity is handled structurally, not by the exclusion list.** If a file uses both
+`Arrays.copyOf` and `List.copyOf`, neither is reported and you may import one, the other, or
+neither. If it uses only one, the bare name is unambiguous *in that file* and the import line names
+the owner. A name already bound in the file by a method, field, parameter or local variable is left
+alone too, since the import would be shadowed.
+
+The exclusion list is therefore only about *uninformative* names — factory-shaped members where the
+member name says what it produces but not of what:
+
+```
+exact:   value  values  valueOf  from  empty  create  builder  parse
+         now  between  getInstance  newInstance  INSTANCE
+prefix:  of…  from…   at a camelCase boundary, so ofSeconds is excluded and offer is not
+```
+
+Self-describing members such as `unmodifiableList`, `toList` and `groupingBy` are deliberately
+absent, and are reported. The list is fixed — suppress at the site for your own factory methods.
+
+Violations are reported **once per member per file**, not once per occurrence, because one import
+fixes them all. A first run over an existing codebase therefore reports roughly the number of import
+lines you need to add.
+
+### UseTypeImports
+
+Reports a fully-qualified type name used in code where an import would let the simple name stand.
+
+This does **not** overlap with PMD's stock `UnnecessaryFullyQualifiedName`, which sounds like it
+covers the same ground and does not. That rule fires only when the simple name is *already* in
+scope, and its fix is to drop the qualifier:
+
+```
+simple name already in scope   →  UnnecessaryFullyQualifiedName (stock)   "drop the qualifier"
+simple name not yet in scope   →  UseTypeImports (this artifact)          "add an import"
+```
+
+The two partition the space, so enabling both never produces two reports for one name.
+
+```java
+private java.util.List<String> names;      // reported: add an import
+private java.time.Duration timeout;        // reported
+
+private List<String> names;                // not reported: imported
+java.lang.String name = "joke";            // not reported: java.lang, the stock rule's job
+private com.example.Helper helper;         // not reported: same package
+```
+
+If two types in one file want the same simple name, only one can be imported — the rule reports
+neither and leaves the choice to you. A qualified nested type such as `java.util.Map.Entry` is
+reported without prescribing which of the two valid fixes to apply. Reported once per name per file.
+
+Note that when PMD cannot resolve a qualifier, both import rules stay silent rather than guess, so a
+clean run is not by itself proof of compliance.
+
 ### The rules cascade
 
 They are designed to fire one at a time rather than all at once, so each violation has a single
@@ -323,6 +411,9 @@ ships nothing that references it, but the two compose if you enable that categor
 `StaticMethodsModifyStaticState` reports them first, and `AvoidLambdaBlockBodies` stops at the block
 body rather than also demanding a method reference. Expect several build runs when adopting these
 rules on an existing codebase — each one surfaces the next step, and each step is mechanical.
+
+`UseStaticImports` and `UseTypeImports` sit outside that chain: they report independently and each
+violation is one import line.
 
 ## Build
 

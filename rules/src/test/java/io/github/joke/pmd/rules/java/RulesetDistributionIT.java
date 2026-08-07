@@ -1,12 +1,12 @@
 package io.github.joke.pmd.rules.java;
 
+import static java.nio.file.Files.write;
+import static java.util.stream.Collectors.toList;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.stream.Collectors;
 import net.sourceforge.pmd.PMDConfiguration;
 import net.sourceforge.pmd.PmdAnalysis;
 import net.sourceforge.pmd.lang.rule.Rule;
@@ -54,7 +54,9 @@ class RulesetDistributionIT {
                             "AvoidPrivateAndProtectedMethods",
                             "UseVisibleForTestingAnnotation",
                             "AvoidLambdaBlockBodies",
-                            "AvoidAnonymousClasses");
+                            "AvoidAnonymousClasses",
+                            "UseStaticImports",
+                            "UseTypeImports");
         }
     }
 
@@ -85,7 +87,7 @@ class RulesetDistributionIT {
 
     @VisibleForTesting
     Report analyse(final Path dir, final String name, final String source) throws IOException {
-        final var file = Files.write(dir.resolve(name + ".java"), List.of(source));
+        final var file = write(dir.resolve(name + ".java"), List.of(source));
         final var configuration = new PMDConfiguration();
         configuration.addInputPath(file);
         try (var pmd = PmdAnalysis.create(configuration)) {
@@ -96,6 +98,6 @@ class RulesetDistributionIT {
 
     @VisibleForTesting
     List<String> ruleNames(final RuleSet ruleset) {
-        return ruleset.getRules().stream().map(Rule::getName).collect(Collectors.toList());
+        return ruleset.getRules().stream().map(Rule::getName).collect(toList());
     }
 }

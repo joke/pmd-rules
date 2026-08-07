@@ -1,5 +1,8 @@
 package io.github.joke.pmd.rules.java;
 
+import static net.sourceforge.pmd.lang.java.ast.ModifierOwner.Visibility.V_PRIVATE;
+import static net.sourceforge.pmd.lang.java.ast.ModifierOwner.Visibility.V_PROTECTED;
+
 import java.util.Set;
 import net.sourceforge.pmd.lang.java.ast.ASTMethodDeclaration;
 import net.sourceforge.pmd.lang.java.ast.Annotatable;
@@ -33,7 +36,7 @@ public class AvoidPrivateAndProtectedMethods extends AbstractJavaRulechainRule {
 
     private static final Set<String> VISIBILITY_NOT_CHOSEN_HERE = Set.of("Override");
 
-    private static final Set<Visibility> REPORTED = Set.of(Visibility.V_PRIVATE, Visibility.V_PROTECTED);
+    private static final Set<Visibility> REPORTED = Set.of(V_PRIVATE, V_PROTECTED);
 
     public AvoidPrivateAndProtectedMethods() {
         super(ASTMethodDeclaration.class);

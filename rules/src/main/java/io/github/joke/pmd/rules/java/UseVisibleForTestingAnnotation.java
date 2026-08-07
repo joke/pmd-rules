@@ -1,9 +1,10 @@
 package io.github.joke.pmd.rules.java;
 
+import static net.sourceforge.pmd.lang.java.ast.ModifierOwner.Visibility.V_PACKAGE;
+
 import java.util.Set;
 import net.sourceforge.pmd.lang.java.ast.ASTMethodDeclaration;
 import net.sourceforge.pmd.lang.java.ast.Annotatable;
-import net.sourceforge.pmd.lang.java.ast.ModifierOwner.Visibility;
 import net.sourceforge.pmd.lang.java.rule.AbstractJavaRulechainRule;
 import org.jetbrains.annotations.VisibleForTesting;
 
@@ -69,7 +70,7 @@ public class UseVisibleForTestingAnnotation extends AbstractJavaRulechainRule {
 
     @VisibleForTesting
     boolean isUnmarkedSeam(final ASTMethodDeclaration node) {
-        return node.getVisibility() == Visibility.V_PACKAGE && !hasAnyAnnotation(node, INTENTIONALLY_PACKAGE_PRIVATE);
+        return node.getVisibility() == V_PACKAGE && !hasAnyAnnotation(node, INTENTIONALLY_PACKAGE_PRIVATE);
     }
 
     @VisibleForTesting
