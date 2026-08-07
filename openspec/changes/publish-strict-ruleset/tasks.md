@@ -57,4 +57,4 @@
       composition is unchanged, so any new violation means the copy was not verbatim
 - [x] 5.3 Run `./gradlew check` and fix every violation before continuing. NEVER continue if there
       are violations
-- [ ] 5.4 Commit with `/commit-commands:commit`
+- [x] 5.4 Commit with `/commit-commands:commit`
