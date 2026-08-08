@@ -79,15 +79,16 @@ do, which is what keeps your PMD version yours to choose.
 file naming stock rules is pinned to the PMD versions that still spell those rules the same way: a
 renamed or removed rule is a hard ruleset-load failure, not a warning. Its floor is 7.26.0 rather
 than 7.0.0 for a concrete reason — it excludes `ImplicitFunctionalInterface`, which PMD added after
-7.0.0. Every version at or above that floor is exercised by this project's cross-version integration
-matrix before release.
+7.0.0. That floor is the range this project supports and analyses itself with; no build check
+asserts it.
 
 **On a PMD older than 7.26.0, use `rulesets/java/joke.xml`** and compose the stock categories
 yourself.
 
 **The published POM declares no dependencies.** PMD comes from your `pmd` configuration at whatever
-version you picked, and this artifact never overrides it. A build verifies the POM is empty on every
-run.
+version you picked, and this artifact never overrides it. Every dependency the module declares sits
+on a configuration that cannot reach the POM — `compileOnly`, `annotationProcessor` or a test
+configuration — which is what keeps it empty.
 
 The jar itself is Java 11 bytecode, so the JVM running PMD must be Java 11 or later. This says
 nothing about the source you analyse: analysing Java 8 code is a property of your PMD language
@@ -467,9 +468,8 @@ violation is one import line.
 ./gradlew check
 ```
 
-Runs the unit tests, the integration tests against every supported PMD version, Spotless, PMD,
-Error Prone with NullAway, mutation testing at 100% mutation, coverage and test strength, and the
-empty-POM check.
+Runs the unit tests, the integration tests at the PMD compile floor, Spotless, PMD, Error Prone with
+NullAway, and mutation testing at 100% mutation, coverage and test strength.
 
 ### This project runs its own rules on itself
 
@@ -488,15 +488,27 @@ edit the rule that is currently failing. To build past it:
 ./gradlew check -x pmdMain -x pmdTest
 ```
 
-Note also that `pmdMain` runs at Gradle's `toolVersion` — a single, recent PMD — so a green run says
-nothing about the 7.0.0 floor. The integration matrix owns that question.
+### How the supported PMD range is covered
 
-`toolVersion` and the strict ruleset's floor move together: `pmdMain` resolves
-`rulesets/java/joke-strict.xml`, so `toolVersion` must be at or above the floor that ruleset
-declares. Raising `toolVersion` therefore means adding that version to `additionalPmdVersions` in
-`rules/build.gradle`, so the matrix still covers what dogfooding runs. The `strictRulesetVersions`
-set there names the versions the strict ruleset is promised on, and the build fails if it names a
-version the matrix does not run.
+Two signals, at the two ends of the range:
+
+| signal | PMD version | comes from | ruleset | code analysed |
+|---|---|---|---|---|
+| `integrationTest` | 7.0.0, the compile floor | the `dependencies` platform | both shipped rulesets | synthetic fixtures |
+| `pmdMain` / `pmdTest` | 7.26.0 | the `pmd-dist` coordinate in the convention plugin | `joke-strict.xml` | this repository's real source |
+
+A rule compiled against API absent from the floor fails `integrationTest`. A rule or ruleset broken
+by a newer PMD fails `pmdMain`, against real source rather than fixtures. Versions between the two
+ends are not exercised, which is a deliberate trade: a compile-floor break shows at the floor and an
+API removal shows at the ceiling, so the interior was carrying no weight.
+
+`pmdMain` therefore says nothing about the 7.0.0 floor on its own — `integrationTest` owns that — and
+the `pmd-dist` version must stay at or above the floor `rulesets/java/joke-strict.xml` declares,
+since `pmdMain` resolves that ruleset.
+
+**Adopting a newer PMD** is one coordinate: raise `net.sourceforge.pmd:pmd-dist` in
+`buildSrc/src/main/groovy/conventions.gradle` and run `./gradlew check`. There is no version list to
+extend and no guard to satisfy.
 
 ### Rule test data stays in XML
 

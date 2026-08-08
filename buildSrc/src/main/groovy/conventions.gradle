@@ -38,15 +38,6 @@ pluginManager.withPlugin('com.diffplug.spotless') {
 pluginManager.withPlugin('java') {
     pluginManager.apply 'info.solidsoft.pitest'
 
-    // Release level on the published source set only. Test code is never published, and
-    // constraining it would forfeit text blocks, records and pattern matching in fixtures for
-    // nothing.
-    //
-    // 11 rather than 8: at --release 8 javac cannot resolve ElementType.MODULE while reading
-    // JSpecify's @NullMarked (it is Java 9+), and emits a warning that no -Xlint category
-    // suppresses, which -Werror turns into a build failure. Java 8 and NullAway are mutually
-    // exclusive here, and NullAway is worth more than a reach that ends at Maven and Ant builds
-    // running PMD on a Java 8 JVM.
     tasks.named('compileJava') {
         options.release = 11
     }
@@ -121,23 +112,11 @@ pluginManager.withPlugin('info.solidsoft.pitest') {
 pluginManager.withPlugin('pmd') {
     pmd {
         consoleOutput = false
-        toolVersion = '7.26.0'
         rulesMinimumPriority = 5
-        // ruleSets, not ruleSetFiles: the ruleset is a resource inside the rules jar, resolved off
-        // the analysis classpath exactly as a consumer resolves it.
-        //
-        // This was ruleSetFiles while the ruleset was a loose file at the repository root, because
-        // `ruleSets` is a List<String> Gradle cannot track as a file input and editing it left the
-        // pmd tasks UP-TO-DATE with the old ruleset in force. That does not carry over to a
-        // classpath resource: the tracked input is then the `pmd` configuration, a @Classpath input
-        // on the Pmd task, so editing the resource rebuilds the jar and the tasks re-run. Tracking
-        // is preserved, not traded away.
-        //
-        // Assigned rather than appended, because ruleSets otherwise keeps Gradle's default of
-        // category/java/errorprone.xml. No $rootDir reference: this block has to survive the
-        // plugin's extraction, and each project declares the rules artifact on its own `pmd`
-        // configuration.
         ruleSets = ['rulesets/java/joke-strict.xml']
+        dependencies {
+            pmd 'net.sourceforge.pmd:pmd-dist:7.26.0'
+        }
     }
 }
 

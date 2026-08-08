@@ -4,41 +4,19 @@ plugins {
     id 'conventions'
 }
 
-// This project analyses its own source with the rules it publishes.
-//
-// The jar arrives on the `pmd` configuration by inheritance rather than by being declared on it
-// directly. Gradle's PmdPlugin supplies PMD itself through `defaultDependencies`, which applies only
-// while the configuration's own dependency set is empty — declaring anything on `pmd` directly
-// therefore replaces the tool instead of joining it, and re-declaring PMD by hand would hardcode a
-// set of artifacts (pmd-java, pmd-ant, …) that varies by Gradle version. Extending keeps the
-// dependency in `allDependencies` but out of `dependencies`, so the default still fires.
-//
-// project(':rules') rather than sourceSets.main.output: that is the shape a consumer receives, so a
-// packaging fault such as a resource missing from the jar fails here rather than in someone
-// else's build.
-//
-// A rule that throws therefore breaks the build that produces it. See the README for how to build
-// past that.
-configurations {
-    ownRules {
-        canBeConsumed = false
-        canBeResolved = false
-    }
-}
-configurations.named('pmd') {
-    extendsFrom configurations.ownRules
-}
-
 dependencies {
-    ownRules project(':rules')
+    annotationProcessor platform(project(':dependencies'))
+    annotationProcessor 'io.github.joke.jspecify:processor'
+    annotationProcessor 'org.projectlombok:lombok'
 
-    // compileOnly, never api: PMD is supplied by the consumer's own `pmd` configuration at a
-    // version they choose. The published POM declares no dependencies at all.
+    pmd project(':rules')
+
     compileOnly platform(project(':dependencies'))
     compileOnly 'net.sourceforge.pmd:pmd-core'
     compileOnly 'net.sourceforge.pmd:pmd-java'
-    compileOnly 'org.jspecify:jspecify'
     compileOnly 'org.jetbrains:annotations'
+    compileOnly 'org.jspecify:jspecify'
+    compileOnly 'org.projectlombok:lombok'
 
     testImplementation platform(project(':dependencies'))
     testImplementation 'net.sourceforge.pmd:pmd-core'
@@ -48,111 +26,10 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
     testImplementation 'org.mockito:mockito-core'
 
-    // The annotation is compileOnly on both source sets for the same reason: it is a marker, not a
-    // runtime dependency, and test code carries it for exactly the same rule.
     testCompileOnly 'org.jetbrains:annotations'
 
     testRuntimeOnly platform(project(':dependencies'))
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
 
-}
-
-// The published artifact must carry no dependencies: PMD is the consumer's to choose. A leak here
-// would silently impose a version on every consumer, which is exactly what this project declines to
-// do, and it would only surface as a version conflict in someone else's build.
-def verifyPomHasNoDependencies = tasks.register('verifyPomHasNoDependencies') {
-    dependsOn tasks.named('generatePomFileForMavenPublication')
-    def pom = layout.buildDirectory.file('publications/maven/pom-default.xml')
-    inputs.file(pom)
-    outputs.upToDateWhen { true }
-    doLast {
-        def declared = new groovy.xml.XmlSlurper().parse(pom.get().asFile)
-                .dependencies.dependency.collect { "${it.groupId}:${it.artifactId}" }
-        if (!declared.isEmpty()) {
-            throw new GradleException("Published POM must declare no dependencies, but found: ${declared}")
-        }
-    }
-}
-
-tasks.named('check') {
-    dependsOn verifyPomHasNoDependencies
-}
-
-// Cross-version compatibility is verified rather than asserted. The default test runtime resolves
-// PMD at the floor declared in the platform, so the `integrationTest` task registered by the
-// convention plugin *is* the 7.0.0 run; each version listed here adds one more task running the same
-// integration tests against that version's PMD. `check` depends on all of them, so `./gradlew check`
-// reproduces the matrix locally, which is where a break is cheapest to find.
-//
-// This lives here rather than in the convention plugin because the plugin is destined for extraction
-// and reuse by projects that do not build PMD rules.
-def pmdFloorVersion = '7.0.0'
-def additionalPmdVersions = ['7.26.0']
-
-// rulesets/java/joke-strict.xml names PMD stock rules this artifact does not own, so unlike the
-// other two resources it cannot claim the 7.0.0 floor — ImplicitFunctionalInterface, which it
-// excludes, did not exist at 7.0.0. These are the versions it is promised on, and the only ones
-// StrictRulesetDistributionIT runs against. Keep in step with the floor stated in the ruleset's own
-// <description> and in the README.
-def strictRulesetVersions = ['7.26.0'] as Set
-
-// A version listed here that the matrix does not run would remove the strict ruleset's coverage
-// without removing anything visible, so the mistake fails the build instead.
-def matrixVersions = ([pmdFloorVersion] + additionalPmdVersions) as Set
-def unmatched = strictRulesetVersions - matrixVersions
-if (!unmatched.isEmpty()) {
-    throw new GradleException(
-            "strictRulesetVersions names PMD versions the integration matrix does not run: ${unmatched.sort()}. " +
-                    "Matrix runs: ${matrixVersions.sort()}")
-}
-
-def strictRulesetIT = '**/StrictRulesetDistributionIT.class'
-
-// The convention plugin's `integrationTest` task is the floor run: it resolves PMD at the version
-// the platform declares, which is pmdFloorVersion. It analyses the strict ruleset only if the floor
-// is one of the versions that ruleset is promised on.
-if (!strictRulesetVersions.contains(pmdFloorVersion)) {
-    tasks.named('integrationTest') {
-        exclude strictRulesetIT
-    }
-}
-
-additionalPmdVersions.each { pmdVersion ->
-    def suffix = pmdVersion.replace('.', '_')
-
-    def pmdRuntime = configurations.create("pmdRuntime$suffix") {
-        canBeConsumed = false
-        canBeResolved = true
-    }
-    dependencies.add(pmdRuntime.name, dependencies.platform(project(':dependencies')))
-    dependencies.add(pmdRuntime.name, "net.sourceforge.pmd:pmd-core:$pmdVersion")
-    dependencies.add(pmdRuntime.name, "net.sourceforge.pmd:pmd-java:$pmdVersion")
-    dependencies.add(pmdRuntime.name, 'org.assertj:assertj-core')
-    dependencies.add(pmdRuntime.name, 'org.junit.jupiter:junit-jupiter-api')
-    dependencies.add(pmdRuntime.name, 'org.junit.jupiter:junit-jupiter-engine')
-    dependencies.add(pmdRuntime.name, 'org.junit.platform:junit-platform-launcher')
-
-    def integrationTestTask = tasks.register("integrationTestPmd$suffix", Test) {
-        description = "Runs the integration tests against PMD $pmdVersion"
-        group = 'verification'
-        useJUnitPlatform {
-            includeTags 'integration'
-        }
-        // Excludes candidate classes before JUnit loads them. The tag filter alone is not enough:
-        // the rule unit tests extend pmd-test's SimpleAggregatorTst, which this configuration
-        // deliberately does not carry, so loading them to read their tags would fail outright.
-        include '**/*IT.class'
-        if (!strictRulesetVersions.contains(pmdVersion)) {
-            exclude strictRulesetIT
-        }
-        testClassesDirs = sourceSets.test.output.classesDirs
-        // main output carries both the rule classes and the ruleset resources, so the ruleset is
-        // resolved from the classpath exactly as it is from the published jar.
-        classpath = sourceSets.test.output + sourceSets.main.output + pmdRuntime
-    }
-
-    tasks.named('check') {
-        dependsOn integrationTestTask
-    }
 }

@@ -14,8 +14,8 @@
         classes, by category/java/joke.xml and by rulesets/java/joke.xml. Unlike those, this file
         names rules it does not own — a stock rule renamed or removed by a later PMD is a
         ruleset-load failure here, and at least one name it excludes (ImplicitFunctionalInterface)
-        did not exist in 7.0.0. Every version the floor admits is exercised by this project's
-        cross-version integration matrix.
+        did not exist in 7.0.0. This floor is the version range the project supports and analyses
+        itself with; it is not asserted by a build check.
 
         On a PMD older than that, or to compose the stock categories differently, reference
         rulesets/java/joke.xml instead and bring your own composition. Gradle's `ruleSets` cannot

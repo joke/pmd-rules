@@ -18,10 +18,14 @@ import org.junit.jupiter.api.Test;
  * ruleset-load failure, and this test is where that surfaces — on a build here rather than in a
  * consumer's analysis.
  *
- * <p>Separate from {@link RulesetDistributionIT} because the two resources carry different PMD
- * floors. This class runs only on the versions {@code rules/build.gradle} declares for the strict
- * ruleset; the floor task excludes it. The split is made by Gradle test filtering rather than a JUnit
- * assumption on the running PMD version, because an assumption that stops holding degrades to a
+ * <p>Separate from {@link RulesetDistributionIT} so that a failure names which resource broke: the
+ * two carry different PMD floors, and one class covering both would not say which one the build was
+ * complaining about.
+ *
+ * <p>Runs at whatever PMD version the test classpath resolves — the 7.0.0 compile floor — rather
+ * than only at the floor this ruleset declares. That it loads there at all is incidental and is not
+ * a support commitment: the declared floor is 7.26.0 and stands on its own. This class does not skip
+ * itself based on the running version, because an assumption that stops holding degrades to a
  * skipped test, which a build log does not distinguish from a test that never ran.
  *
  * <p>Deliberately does not use {@code pmd-test}, for the reason given on {@link
