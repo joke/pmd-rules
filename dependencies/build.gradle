@@ -35,9 +35,9 @@ dependencies {
         // The supported PMD floor. Rules compiled against the floor run on newer PMD; the reverse
         // throws NoSuchMethodError inside the consumer's analysis. Raising this is a decision to be
         // recorded in a change, never a side effect of a dependency update.
-        api 'net.sourceforge.pmd:pmd-core:7.0.0'
-        api 'net.sourceforge.pmd:pmd-java:7.0.0'
-        api 'net.sourceforge.pmd:pmd-test:7.0.0'
+        api 'net.sourceforge.pmd:pmd-core:7.26.0'
+        api 'net.sourceforge.pmd:pmd-java:7.26.0'
+        api 'net.sourceforge.pmd:pmd-test:7.26.0'
     }
 
 }
