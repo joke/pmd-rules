@@ -111,5 +111,5 @@
       `verifyPomHasNoDependencies`
 - [x] 9.3 Confirm the published jar still contains all three rule resources
 - [x] 9.4 `openspec validate simplify-build-wiring`
-- [ ] 9.5 Commit as `refactor:` with a body naming the removed matrix and POM task, since both are
+- [x] 9.5 Commit as `refactor:` with a body naming the removed matrix and POM task, since both are
       deliberate reductions in verification and a reader of the log should not have to infer that
