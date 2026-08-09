@@ -54,6 +54,11 @@ public class UseStaticImports extends AbstractJavaRulechainRule {
      * thing that carried the type. Ambiguity is not the concern here — conflict detection covers
      * that — so self-describing members such as {@code unmodifiableList} or {@code toList} are
      * absent on purpose.
+     *
+     * <p>{@code copyOf} qualifies on those grounds alone — a copy of what, into what, is carried by
+     * {@code List}, {@code Set} or {@code Arrays} and never by the member name. Error Prone's
+     * {@code BadImport} check independently refuses to let anyone statically import it, so the entry
+     * also spares consumers of both tools a pair of reports no single edit satisfies.
      */
     private static final Set<String> UNINFORMATIVE_NAMES = Set.of(
             "value",
@@ -66,6 +71,7 @@ public class UseStaticImports extends AbstractJavaRulechainRule {
             "parse",
             "now",
             "between",
+            "copyOf",
             "getInstance",
             "newInstance",
             "INSTANCE");

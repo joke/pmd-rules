@@ -361,6 +361,11 @@ the owner; the code should not repeat it on every use.
 > </rule>
 > ```
 
+> **Error Prone's `BadImport` needs nothing from you.** It rejects static imports of a handful of
+> names this rule would otherwise demand, `copyOf` among them, which would leave you with one report
+> asking for the import and one refusing it. `copyOf` is excluded here for that reason — and because
+> it is uninformative anyway — so the two tools agree without a suppression on either side.
+
 **The threshold is a floor, not a ceiling.** The rule only ever says "import this". It never reports
 an import as unnecessary and never stops you importing a shorter name by hand, so anything below the
 floor is simply your call, and a report you disagree with is a `@SuppressWarnings` away.
@@ -375,6 +380,7 @@ Math.max(a, b)                     // not reported: 3 characters, under the floo
 Optional.empty()                   // not reported: empty what?
 Duration.ofSeconds(3)              // not reported: of[A-Z] prefix
 Registry.INSTANCE                  // not reported: instance of what?
+List.copyOf(xs)                    // not reported: a copy of what, into what?
 Example.class.getName()            // not reported: a class literal cannot be imported
 ```
 
@@ -382,7 +388,7 @@ Short names are left alone because the short static members of the JDK are overw
 ambiguous ones — `of`, `get`, `min`, `max`, `now`, `abs`, `sum`.
 
 **Ambiguity is handled structurally, not by the exclusion list.** If a file uses both
-`Arrays.copyOf` and `List.copyOf`, neither is reported and you may import one, the other, or
+`Arrays.toString` and `Objects.toString`, neither is reported and you may import one, the other, or
 neither. If it uses only one, the bare name is unambiguous *in that file* and the import line names
 the owner. A name already bound in the file by a method, field, parameter or local variable is left
 alone too, since the import would be shadowed.
@@ -392,7 +398,7 @@ member name says what it produces but not of what:
 
 ```
 exact:   value  values  valueOf  from  empty  create  builder  parse
-         now  between  getInstance  newInstance  INSTANCE
+         now  between  copyOf  getInstance  newInstance  INSTANCE
 prefix:  of…  from…   at a camelCase boundary, so ofSeconds is excluded and offer is not
 ```
 

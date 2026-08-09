@@ -363,8 +363,9 @@ because the short static members of the JDK are overwhelmingly the ambiguous one
 `min`, `max`, `now`, `abs`, `sum`.
 
 Ambiguity between owners is handled structurally, not by the exclusion list. If a file uses both
-`Arrays.copyOf` and `List.copyOf`, neither is reported and you may import one, the other, or neither.
-If it uses only one, the bare name is unambiguous in that file and the import line names the owner.
+`Arrays.toString` and `Objects.toString`, neither is reported and you may import one, the other, or
+neither. If it uses only one, the bare name is unambiguous in that file and the import line names the
+owner.
 
 The exclusion list is therefore only about *uninformative* names — factory-shaped members where the
 member name says what it produces but not of what, leaving the class as the only thing carrying the
@@ -372,7 +373,8 @@ type. Self-describing members such as `unmodifiableList`, `toList` and `grouping
 absent, and are reported.
 
 Excluded exactly: `value`, `values`, `valueOf`, `from`, `empty`, `create`, `builder`, `parse`, `now`,
-`between`, `getInstance`, `newInstance`, `INSTANCE`. Excluded by prefix at a camelCase boundary:
+`between`, `copyOf`, `getInstance`, `newInstance`, `INSTANCE`. Excluded by prefix at a camelCase
+boundary:
 `of…` and `from…`, so `ofSeconds` is excluded while `offer` is not. The list is fixed; suppress at
 the site for your own factory methods.
 
@@ -399,12 +401,13 @@ public class Example {
         Optional.empty();                    // no violation: empty what?
         Duration.ofSeconds(3);               // no violation: of[A-Z] prefix
         Registry.INSTANCE.lookup();          // no violation: instance of what?
+        List.copyOf(xs);                     // no violation: a copy of what, into what?
         Example.class.getName();             // no violation: a class literal cannot be imported
     }
 
-    void conflicting(int[] a, java.util.List<String> xs) {
-        Arrays.copyOf(a, 2);                 // no violation: two owners of `copyOf` in one file,
-        List.copyOf(xs);                     // so the developer chooses one, or neither
+    void conflicting(int[] a, Object x) {
+        Arrays.toString(a);                  // no violation: two owners of `toString` in one file,
+        Objects.toString(x);                 // so the developer chooses one, or neither
     }
 }
 ]]>
