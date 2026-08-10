@@ -173,12 +173,12 @@ public class Example {
         <expected-problems>0</expected-problems>
         <code><![CDATA[
 import java.util.Arrays;
-import java.util.List;
+import java.util.Objects;
 
 public class Example {
-    void m(int[] a, List<String> xs) {
-        Arrays.copyOf(a, 2);
-        List.copyOf(xs);
+    void m(int[] a, Object x) {
+        Arrays.toString(a);
+        Objects.toString(x);
     }
 }
         ]]></code>
@@ -192,7 +192,21 @@ import java.util.Arrays;
 
 public class Example {
     void m(int[] a) {
-        Arrays.copyOf(a, 2);
+        Arrays.toString(a);
+    }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a sole owner of copyOf is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+import java.util.List;
+
+public class Example {
+    void m(List<String> xs) {
+        List.copyOf(xs);
     }
 }
         ]]></code>
