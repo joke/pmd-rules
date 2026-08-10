@@ -27,9 +27,8 @@ public class Example {
     </test-code>
 
     <test-code>
-        <description>a static factory returning the enclosing type is reported: a constructor is the compliant form</description>
-        <expected-problems>1</expected-problems>
-        <expected-linenumbers>2</expected-linenumbers>
+        <description>a static factory returning the enclosing type is a named constructor and is not reported</description>
+        <expected-problems>0</expected-problems>
         <code><![CDATA[
 public class Example {
     static Example of(int x) { return new Example(); }
@@ -376,6 +375,219 @@ public class Example {
     static String format(int n) { return "" + n; }
 
     String keep() { return "x"; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a static factory returning the enclosing type is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Foo {
+    static Foo of(int x) { return new Foo(); }
+
+    String keep() { return "x"; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a static factory returning a directly implemented interface is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class FooImpl implements Foo {
+    static Foo of(int x) { return new FooImpl(); }
+
+    String keep() { return "x"; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a static factory returning the second of two declared interfaces is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class FooImpl implements Serializable, Foo {
+    static Foo of(int x) { return new FooImpl(); }
+
+    String keep() { return "x"; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a static factory in an interface may return the interface the interface extends</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public interface Special extends Foo {
+    static Foo of(int x) { return null; }
+
+    default String keep() { return "x"; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a static factory returning an unrelated type is reported</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>2</expected-linenumbers>
+        <code><![CDATA[
+public class Foo {
+    static Bar of(int x) { return new Bar(); }
+
+    String keep() { return "x"; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a static factory returning a superclass is reported: only directly declared types are exempt</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>2</expected-linenumbers>
+        <code><![CDATA[
+public class Foo extends Base {
+    static Base of(int x) { return new Foo(); }
+
+    String keep() { return "x"; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a static factory returning a transitively inherited interface is reported</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>2</expected-linenumbers>
+        <code><![CDATA[
+public class FooImpl implements Foo {
+    static Base of(int x) { return new FooImpl(); }
+
+    String keep() { return "x"; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a void static method is reported: void names no type</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>2</expected-linenumbers>
+        <code><![CDATA[
+public class Foo {
+    static void configure(int x) { }
+
+    String keep() { return "x"; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a primitive return is reported: a primitive names no type</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>2</expected-linenumbers>
+        <code><![CDATA[
+public class Foo {
+    static int of(int x) { return x; }
+
+    String keep() { return "x"; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>an array of the enclosing type is reported: an array is not the constructor</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>2</expected-linenumbers>
+        <code><![CDATA[
+public class Foo {
+    static Foo[] of(int x) { return new Foo[x]; }
+
+    String keep() { return "x"; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a generic factory returning the enclosing type is not reported</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+public class Foo<T> {
+    static <T> Foo<T> of(T x) { return new Foo<T>(); }
+
+    String keep() { return "x"; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>a Lombok utility class is exempt even though its methods are not declared static</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+import lombok.experimental.UtilityClass;
+
+@UtilityClass
+public class Coercion {
+    static String format(int n) { return "" + n; }
+
+    String render(int n) { return "" + n; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>the UtilityClass marker is matched by simple name from any package</description>
+        <expected-problems>0</expected-problems>
+        <code><![CDATA[
+import com.example.annotations.UtilityClass;
+
+@UtilityClass
+public class Coercion {
+    static String format(int n) { return "" + n; }
+
+    String keep() { return "x"; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>without the marker the same public class is reported: the marker is what exempts it</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>2</expected-linenumbers>
+        <code><![CDATA[
+public class Coercion {
+    static String format(int n) { return "" + n; }
+
+    String keep() { return "x"; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>an unrelated annotation on the enclosing type does not exempt its static methods</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>3</expected-linenumbers>
+        <code><![CDATA[
+@Deprecated
+public class Coercion {
+    static String format(int n) { return "" + n; }
+
+    String keep() { return "x"; }
+}
+        ]]></code>
+    </test-code>
+
+    <test-code>
+        <description>the marker on an enclosing type does not exempt a nested type's static methods</description>
+        <expected-problems>1</expected-problems>
+        <expected-linenumbers>6</expected-linenumbers>
+        <code><![CDATA[
+import lombok.experimental.UtilityClass;
+
+@UtilityClass
+public class Coercion {
+    public static class Nested {
+        static String format(int n) { return "" + n; }
+
+        String keep() { return "x"; }
+    }
 }
         ]]></code>
     </test-code>

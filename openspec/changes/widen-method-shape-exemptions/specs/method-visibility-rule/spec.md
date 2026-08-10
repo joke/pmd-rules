@@ -1,13 +1,4 @@
-# method-visibility-rule Specification
-
-## Purpose
-
-The `AvoidPrivateAndProtectedMethods` rule: the legal method visibilities, the markers that make a
-`protected` method a declared intent, the constructor and `@Override` exemptions, the cascade with
-`StaticMethodsModifyStaticState`, why the cross-module subclass check it does not attempt is not
-implementable in PMD, and its documentation, test and mutation-coverage obligations.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: AvoidPrivateAndProtectedMethods permits only public and package-private methods
 The artifact SHALL provide a rule named `AvoidPrivateAndProtectedMethods` that reports a method
@@ -78,52 +69,6 @@ dot, so a dotted entry would be unmatchable.
 - **WHEN** a class declares `@VisibleForTesting private boolean check() { return true; }`
 - **THEN** the rule reports a violation, because no marker makes a `private` method reachable
 
-### Requirement: Constructors are out of scope
-The rule SHALL NOT report constructors of any visibility. A constructor is not spied, and a `private`
-constructor is required by the utility-class exception in `static-method-state-rule` and by the stock
-`UseUtilityClass` rule.
-
-#### Scenario: A private constructor is not reported
-- **WHEN** a class declares `private Example() { }`
-- **THEN** the rule reports no violation
-
-#### Scenario: A protected constructor is not reported
-- **WHEN** a class declares `protected Example() { }`
-- **THEN** the rule reports no violation
-
-### Requirement: Overriding methods are exempt
-The rule SHALL NOT report a method annotated `@Override`. An overriding method's visibility is fixed
-by its supertype and is not the author's to choose — Java forbids narrowing it, and a framework
-superclass that declares a `protected` hook requires a `protected` override.
-
-The annotation SHALL be matched by simple name.
-
-#### Scenario: A protected override is not reported
-- **WHEN** a class declares `@Override protected void setUp() { }`
-- **THEN** the rule reports no violation
-
-#### Scenario: A protected method without @Override is reported
-- **WHEN** a class declares `protected void setUp() { }` with no `@Override`
-- **THEN** the rule reports a violation
-
-### Requirement: Static methods are left to the static rule
-The rule SHALL NOT report a `static` method, regardless of its visibility.
-`StaticMethodsModifyStaticState` reports it first; once staticness is fixed this rule reports the
-visibility on the next run.
-
-Cascading is preferred to simultaneous reporting: one method then produces one violation with one
-obvious fix, rather than two reports on one line.
-
-#### Scenario: A private static method is reported once, by the static rule
-- **WHEN** a class with instance methods declares `private static boolean check() { return true; }`
-- **THEN** `AvoidPrivateAndProtectedMethods` reports no violation
-- **AND** `StaticMethodsModifyStaticState` reports one
-
-#### Scenario: A private method in a utility class is reported
-- **WHEN** a utility class declares `private static boolean check()`
-- **THEN** `StaticMethodsModifyStaticState` reports no violation, because the type is exempt
-- **AND** `AvoidPrivateAndProtectedMethods` reports no violation, because the method is static
-
 ### Requirement: The rule does not attempt cross-file subclass analysis
 The rule SHALL report an unmarked `protected` method unconditionally rather than only when no
 subclass uses it, and this SHALL be recorded as a deliberate limit rather than an omission.
@@ -168,26 +113,3 @@ The markers therefore never put this rule in opposition to those.
 - **WHEN** a `final` class that extends nothing declares `@VisibleForTesting protected void check() { }`
 - **THEN** this rule reports no violation, and the stock
   `AvoidProtectedMethodInFinalClassNotExtending` reports it instead
-
-### Requirement: The rule is documented in the category file and the README
-`category/java/joke.xml` SHALL declare the rule with its implementing class, a message, a
-description, a priority and both a violating and a compliant example. `rulesets/java/joke.xml` SHALL
-include it. `README.md` SHALL document it, including the `@Override` exemption and the suppression
-path for extension points.
-
-#### Scenario: The category entry is complete
-- **WHEN** the `AvoidPrivateAndProtectedMethods` entry in `category/java/joke.xml` is inspected
-- **THEN** it declares a `class`, a `message`, a `<description>`, a `<priority>` and an `<example>`
-
-### Requirement: The rule is covered by unit tests and mutation testing
-The rule SHALL be unit-tested with JUnit 5 using `pmd-test`, with a fixture covering every reported
-and every non-reported case above, and SHALL meet the project's 100% mutation, coverage and test
-strength thresholds.
-
-#### Scenario: Every specified case has a fixture
-- **WHEN** the rule's test data is inspected
-- **THEN** it contains a case for each reported and each non-reported scenario in this spec
-
-#### Scenario: Mutation thresholds are met
-- **WHEN** `./gradlew pitest` runs
-- **THEN** the rule class meets 100% mutation coverage, line coverage and test strength

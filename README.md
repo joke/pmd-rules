@@ -130,7 +130,8 @@ language version rather than reporting violations you cannot act on.
 
 ### StaticMethodsModifyStaticState
 
-Reports a `static` method that neither writes private static state nor belongs to a utility class.
+Reports a `static` method that neither writes private static state, belongs to a utility class, nor
+is a named constructor.
 
 This is about what the modifier tells a reader, not about mocking — Mockito's inline mock maker and
 Spock's `SpyStatic` both mock statics, so a mockability argument would simply be false. Left
@@ -140,7 +141,6 @@ seeing it tells you to go find the field.
 
 ```java
 static String format(int n) { return "" + n; }   // reported: a helper, not state
-static Example of(int x) { return new Example(); }  // reported: a constructor is the compliant form
 static int get() { return count; }               // reported: a read is not a write
 static void register(String k, String v) {       // reported: nothing can tell put from size
     REGISTRY.put(k, v);
@@ -148,6 +148,7 @@ static void register(String k, String v) {       // reported: nothing can tell p
 
 static void bump() { count++; }                  // not reported: writes private static state
 static void reset() { count = 0; }               // not reported: so does this
+static Example of(int x) { return new Example(); }  // not reported: a named constructor
 public static void main(String[] args) { }       // not reported: the JVM requires static
 ```
 
@@ -162,6 +163,36 @@ so a `public class` with no declared constructor is *not* a utility class — wh
 stock `UseUtilityClass`. An interface has no constructor at all, and an enum's implicit constructor
 is always private.
 
+A type carrying an annotation named `UtilityClass` is exempt without the structural test. Lombok's
+`@UtilityClass` privatises the constructor and makes every member static during annotation
+processing, so the source PMD reads declares instance-looking methods and no constructor at all,
+which fails both halves of the structural test on a type that is a utility class once compiled. The
+annotation is matched by **simple name**, so this adds no dependency on Lombok — a project without it
+simply never matches the name.
+
+A **named constructor** is exempt: a `static` method whose declared return type is its own declaring
+type, or an interface that type *directly declares* it implements. A test double over such a factory
+could only return what the constructor it wraps already returns, so there is nothing to intercept and
+no seam is lost — it is not a helper hiding behind `static`, it is the constructor, named.
+
+```java
+public class Cost implements Comparable<Cost> {
+    static Cost finite(int amount) { … }         // not reported: returns its own type
+    static Comparable<Cost> comparable(int a) { … }  // not reported: a directly declared interface
+
+    static Number total(int a) { … }             // reported: a factory for something else
+    static Cost[] all() { … }                    // reported: an array is not the constructor
+    static void configure(int a) { … }           // reported: void names no type
+}
+```
+
+A superclass return type, or an interface inherited transitively rather than declared here, is still
+reported. The comparison is on **simple names**, with no type resolution, for the same reason
+`UseVisibleForTestingAnnotation` matches names: resolution needs an `auxclasspath` consumers
+frequently do not configure, and a misconfigured one would make the rule silently pass. The cost is
+that a factory returning a same-named type from another package is exempted too — a missed report
+review can catch, which beats silent under-reporting nobody can see.
+
 `main(String[])` and `@BeforeAll`/`@AfterAll` methods are exempt because the platform forces them to
 be static and an unfixable violation is worse than a missed one. **A `@MethodSource` provider and a
 Spring `static @Bean` are not exempt** — the annotation names the provider in a string, so nothing
@@ -170,19 +201,26 @@ is the expected response there, not a sign that something has gone wrong.
 
 ### AvoidPrivateAndProtectedMethods
 
-Reports a method declared `private` or `protected`. The only legal visibilities are `public` and
-package-private.
+Reports a method declared `private`, or declared `protected` without a marker stating why. The legal
+visibilities are `public`, package-private, and a `protected` whose intent is declared.
 
 A `private` method cannot be reached from a test, so it is only ever exercised through whatever
 public method calls it, and it cannot be stubbed when that caller is the thing you meant to test.
-`protected` is reachable but is the wrong seam: it widens the API to every subclass in every
-consumer's codebase, where package-private widens it only to the package the test lives in.
-Package-private also collides with nothing, while `protected` opposes PMD's own
-`AvoidProtectedMethodInFinalClassNotExtending` and `AvoidProtectedFieldInFinalClass`.
+No annotation changes that, so **no marker excuses a `private` method**.
+
+`protected` is reachable but is usually the wrong seam: it widens the API to every subclass in every
+consumer's codebase, where package-private widens it only to the package the test lives in. So
+package-private is the default internal form and `protected` is a stated exception, permitted when
+the method carries one of two markers:
+
+| Marker | Meaning |
+|---|---|
+| `@ApiStatus.OverrideOnly` | an extension point implementors override |
+| `@VisibleForTesting` | a visibility widened to create a test seam |
 
 ```java
 private boolean check() { return true; }      // reported
-protected boolean verify() { return true; }   // reported
+protected boolean verify() { return true; }   // reported: unmarked
 
 boolean inspect() { return true; }            // not reported: package-private
 public boolean isValid() { return true; }     // not reported: public API
@@ -190,13 +228,36 @@ private Example() { }                         // not reported: constructors are 
 
 @Override
 protected void hook() { }                     // not reported: visibility is not chosen here
+
+@ApiStatus.OverrideOnly
+protected void extend() { }                   // not reported: a declared extension point
+
+@VisibleForTesting
+protected boolean seam() { return true; }     // not reported: a declared test seam
+
+@VisibleForTesting
+private boolean hidden() { return true; }     // reported: no marker makes private reachable
 ```
+
+The markers are matched by **simple name**, so both `@OverrideOnly` imported directly and
+`@ApiStatus.OverrideOnly` qualified through its outer type are recognised. The set is hardcoded
+rather than exposed as a rule property: letting each project choose which annotations legitimise
+`protected` reintroduces exactly the per-project drift the rule exists to prevent.
+
+**This does not soften the rule.** The count of *undeclared* legal forms is still zero — an unmarked
+`protected` is reported exactly as before. What a marker hands back is a choice between two
+*documented* intents, not a choice about whether to declare one, and the rule's purpose of removing
+discretion survives intact.
+
+The markers are necessary because package-private is not always a compliant rewrite. A `protected`
+member on a published abstract base whose subclasses live in other packages and other modules is
+unreachable if narrowed, so the rule without them demanded a rewrite that does not compile.
 
 Constructors are out of scope — you do not spy a constructor, and a private one is required by
 `StaticMethodsModifyStaticState`'s utility-class exception. `@Override` methods are exempt, because
 Java forbids narrowing an inherited visibility.
 
-For a genuine extension point, suppress it:
+For anything the markers do not cover, suppress it:
 
 ```java
 @SuppressWarnings("PMD.AvoidPrivateAndProtectedMethods")
@@ -205,9 +266,12 @@ protected void extensionPoint() { }
 
 Reporting `protected` only when no subclass actually uses it would be better, and is not possible:
 PMD analyses one compilation unit at a time, rules are copied per thread, and every violation must
-be attached to a live parsed node. "Does any subclass exist" is a whole-module question. The one
-case provable in a single file — `protected` in a `final` class — is already covered by PMD's stock
-`AvoidProtectedMethodInFinalClassNotExtending`.
+be attached to a live parsed node. "Does any subclass exist" is a whole-module question. The markers
+exist so the question never has to be asked — a declaration is readable from a single file, which
+makes the check correct even across a module boundary and into a consumer's subclass. The one case
+provable in a single file — `protected` in a `final` class — is already covered by PMD's stock
+`AvoidProtectedMethodInFinalClassNotExtending`, which stays correct where it fires: nothing can
+override in a `final` class, and no out-of-package subclass can exist there for a seam to reach.
 
 ### UseVisibleForTestingAnnotation
 
@@ -464,6 +528,15 @@ ships nothing that references it, but the two compose if you enable that categor
 `StaticMethodsModifyStaticState` reports them first, and `AvoidLambdaBlockBodies` stops at the block
 body rather than also demanding a method reference. Expect several build runs when adopting these
 rules on an existing codebase — each one surfaces the next step, and each step is mechanical.
+
+Not every `static` method enters the chain. A **named constructor** — a `static` method returning its
+own declaring type or a directly declared interface — is exempt, so it exits at the first step rather
+than being reported by it and pushed toward an instance method it was never meant to become:
+
+```java
+static Cost finite(int amount) { … }                     // exits here: a named constructor
+private static void process(…)                           // continues down the chain
+```
 
 `UseStaticImports` and `UseTypeImports` sit outside that chain: they report independently and each
 violation is one import line.

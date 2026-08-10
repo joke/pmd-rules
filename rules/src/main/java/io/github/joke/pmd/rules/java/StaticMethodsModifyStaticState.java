@@ -6,6 +6,7 @@ import static net.sourceforge.pmd.lang.java.ast.ModifierOwner.Visibility.V_PROTE
 
 import java.util.Set;
 import net.sourceforge.pmd.lang.java.ast.ASTAssignableExpr.ASTNamedReferenceExpr;
+import net.sourceforge.pmd.lang.java.ast.ASTClassType;
 import net.sourceforge.pmd.lang.java.ast.ASTConstructorDeclaration;
 import net.sourceforge.pmd.lang.java.ast.ASTMethodDeclaration;
 import net.sourceforge.pmd.lang.java.ast.ASTTypeDeclaration;
@@ -17,8 +18,8 @@ import org.jetbrains.annotations.VisibleForTesting;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Reports a {@code static} method that neither writes private static state nor belongs to a utility
- * class.
+ * Reports a {@code static} method that neither writes private static state, belongs to a utility
+ * class, nor is a named constructor.
  *
  * <p>The point is what {@code static} tells a reader. Left alone, the modifier means any of five
  * things — helper, factory, constant accessor, entry point, class-state mutator — and therefore
@@ -48,6 +49,19 @@ public class StaticMethodsModifyStaticState extends AbstractJavaRulechainRule {
      */
     private static final Set<String> STATIC_REQUIRED_BY_FRAMEWORK = Set.of("BeforeAll", "AfterAll");
 
+    /**
+     * Annotations that declare their type to be a utility class, short-circuiting the structural
+     * test below. Lombok's {@code @UtilityClass} privatises the constructor and makes every member
+     * static during annotation processing, so the source PMD reads declares instance-looking methods
+     * and no constructor at all — which defeats both halves of the structural test on a type that
+     * is, once compiled, exactly the shape the exemption describes.
+     *
+     * <p>A set rather than a constant because the same source-level trick is not unique to Lombok.
+     * Matched by simple name, so nothing is imported and no dependency on Lombok is introduced — a
+     * project without it simply never matches the name.
+     */
+    private static final Set<String> UTILITY_CLASS_MARKERS = Set.of("UtilityClass");
+
     public StaticMethodsModifyStaticState() {
         super(ASTMethodDeclaration.class);
     }
@@ -72,7 +86,46 @@ public class StaticMethodsModifyStaticState extends AbstractJavaRulechainRule {
 
     @VisibleForTesting
     boolean isJustified(final ASTMethodDeclaration node) {
-        return isRequiredStaticByPlatform(node) || declaredInUtilityClass(node) || writesPrivateStaticField(node);
+        return isRequiredStaticByPlatform(node)
+                || declaredInUtilityClass(node)
+                || isNamedConstructor(node)
+                || writesPrivateStaticField(node);
+    }
+
+    /**
+     * A {@code static} method whose declared return type names its own declaring type, or an
+     * interface that type directly declares it implements, is a constructor with a name. A test
+     * double over it could only return what the constructor it wraps already returns, so there is
+     * nothing to intercept and no seam is lost.
+     *
+     * <p>Only the declaring type and its <strong>directly declared</strong> interfaces count. A
+     * factory returning a superclass, or an interface inherited transitively rather than declared
+     * here, is a factory for something else — which is a helper.
+     *
+     * <p>Narrowing the result type to {@link ASTClassType} is what excludes {@code void} and the
+     * primitives without a special case: {@code void} parses to {@code ASTVoidType} and {@code int}
+     * to {@code ASTPrimitiveType}, and neither is a class type. An array return falls through the
+     * same way, which is correct — an array of the declaring type is not the constructor.
+     */
+    @VisibleForTesting
+    boolean isNamedConstructor(final ASTMethodDeclaration node) {
+        final var resultType = node.getResultTypeNode();
+        return resultType instanceof ASTClassType
+                && namesDeclaringTypeOrItsInterfaces(
+                        node.getEnclosingType(), ((ASTClassType) resultType).getSimpleName());
+    }
+
+    /**
+     * Compared by simple name, without type resolution, for the reason {@link
+     * UseVisibleForTestingAnnotation} documents: resolution needs an {@code auxclasspath} consumers
+     * frequently do not configure, and a misconfigured one would make the rule silently pass. The
+     * cost is that a factory returning a same-named type from another package is exempted too — a
+     * missed report review can catch, preferred to silent under-reporting nobody can see.
+     */
+    @VisibleForTesting
+    boolean namesDeclaringTypeOrItsInterfaces(final ASTTypeDeclaration type, final String name) {
+        return name.equals(type.getSimpleName())
+                || type.getSuperInterfaceTypeNodes().any(iface -> name.equals(iface.getSimpleName()));
     }
 
     @VisibleForTesting
@@ -85,10 +138,17 @@ public class StaticMethodsModifyStaticState extends AbstractJavaRulechainRule {
         return node.getDeclaredAnnotations().any(annotation -> simpleNames.contains(annotation.getSimpleName()));
     }
 
+    /**
+     * The marker is checked <strong>before</strong> the structural test, not after. Under
+     * {@code @UtilityClass} both halves of that test fail — methods are declared without
+     * {@code static} and no constructor is declared at all — on a type that is, once compiled,
+     * exactly the shape the exemption describes.
+     */
     @VisibleForTesting
     boolean declaredInUtilityClass(final ASTMethodDeclaration node) {
         final var type = node.getEnclosingType();
-        return declaresNoInstanceMethod(type) && declaresNoAccessibleConstructor(type);
+        return hasAnyAnnotation(type, UTILITY_CLASS_MARKERS)
+                || (declaresNoInstanceMethod(type) && declaresNoAccessibleConstructor(type));
     }
 
     /**
