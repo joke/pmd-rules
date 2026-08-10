@@ -47,6 +47,6 @@
 - [x] 7.3 Confirm the shipped resources reference nothing outside this artifact, and that no rule became stricter — no consumer's build may newly fail
 - [x] 7.4 Run the PMD-range coverage check so the new paths are exercised at the 7.0.0 floor, not only at the resolved version
 - [x] 7.5 Run `/opsx:sync` to fold the delta specs into the main specs
-- [ ] 7.6 Commit with `/commit-commands:commit`
+- [x] 7.6 Commit with `/commit-commands:commit`
 - [ ] 7.7 **Release** — cut a version and publish it; `percolate`'s `adopt-pmd-for-method-shape` pins a released version and cannot start against a snapshot
 - [ ] 7.8 Tell the `percolate` change which version to pin, and re-measure its baseline: the two static exemptions should erase roughly 53 of its violations
