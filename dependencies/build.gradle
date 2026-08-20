@@ -9,7 +9,7 @@ javaPlatform {
 
 dependencies {
 
-    api platform('org.junit:junit-bom:6.1.2')
+    api platform('org.junit:junit-bom:6.1.3')
 
     constraints {
         api 'org.assertj:assertj-core:3.27.7'
