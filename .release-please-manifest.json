@@ -1,4 +1,4 @@
 {
-  "codenarc-rules": "0.0.0",
-  "pmd-rules": "0.1.0"
+  "codenarc-rules": "1.0.0",
+  "pmd-rules": "1.0.0"
 }
