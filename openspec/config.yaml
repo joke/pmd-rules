@@ -1,25 +1,44 @@
 schema: spec-driven
 
 context: |
-  Tech stack: custom PMD 7 rules, published as io.github.joke.pmd:rules
+  Two published artifacts from one repository, versioned independently via a multi-package
+  release-please manifest:
+    io.github.joke.lint:pmd-rules       - PMD 7 rules for Java
+    io.github.joke.lint:codenarc-rules  - CodeNarc 4 rules for Groovy, aimed at Spock specifications
+  Both implement their rules as Java classes. CodeNarc's AbstractRule, AbstractAstVisitor and
+  AbstractAstVisitorRule are Java, so writing CodeNarc rules in Groovy is a taste, not a requirement,
+  and Java keeps Error Prone, NullAway, Spotless, -Werror and Pitest applying to rule code.
   Main source targets Java 11 (built on Liberica 25); test source compiles at the toolchain level.
   Not Java 8: at --release 8 javac cannot resolve ElementType.MODULE while reading JSpecify's
   @NullMarked, and -Werror turns that unsuppressable warning into a build failure.
-  PMD is compileOnly at 7.0.0 — the supported floor. Rules compiled against the floor run on newer
-  PMD; the reverse throws NoSuchMethodError inside the consumer's analysis. Never raise the floor
-  as a side effect of a dependency update.
-  The published POM declares no dependencies: the consumer supplies PMD via Gradle's pmd
-  configuration at a version they choose.
-  Testing: JUnit 5 with net.sourceforge.pmd:pmd-test, AssertJ, Pitest (100/100/100)
-  No Groovy, no Spock — CodeNarc config is retained in the convention plugin but inert here
-  We use conventional commits
-  Domain: Java-implemented PMD rules shipped as a category file plus a convenience ruleset,
-  referencing no PMD stock category so the artifact floats across all of PMD 7.x
+  release=11 also keeps rule bytecode readable by the Groovy ASM that loads rule classes named in a
+  CodeNarc ruleset.
+  PMD is compileOnly at 7.0.0; CodeNarc and Groovy are compileOnly at CodeNarc 4.0.0 - the supported
+  floors. Rules compiled against a floor run on newer tools; the reverse fails inside the consumer's
+  analysis. Never raise a floor as a side effect of a dependency update.
+  CodeNarc's POM puts Groovy at runtime scope, so Groovy must be declared compileOnly separately or
+  a Java rule extending AbstractAstVisitor will not compile.
+  Groovy 5 line throughout: Groovy 5.0.x, spock-core 2.4-groovy-5.0, CodeNarc 4.0.0. These move
+  together because CodeNarc parses .groovy source with its own embedded Groovy.
+  Both published POMs declare no dependencies: the consumer supplies the tool via Gradle's pmd or
+  codenarc configuration at a version they choose.
+  Testing: pmd-rules uses JUnit 5 with net.sourceforge.pmd:pmd-test, AssertJ, Mockito and XML
+  fixtures. codenarc-rules uses Spock; every specification carries @spock.lang.Tag('unit') or
+  ('integration') because the test/integrationTest split and Pitest's includedGroups select on it.
+  Pitest at 100/100/100 for both modules.
+  Dogfooding: pmd-rules analyses both modules' Java; codenarc-rules analyses its own Spock
+  specifications with its own published ruleset.
+  Groovy is deliberately unformatted - Spotless is Java-only, CodeNarc carries Groovy style.
+  We use conventional commits. release-please routes commits by path, so a change that alters what a
+  module publishes must touch that module or no release is cut.
+  Domain: Java-implemented lint rules shipped as rulesets. PMD ships a category file plus two
+  rulesets; CodeNarc ships two Groovy-DSL rulesets (its XML form needs an FQCN per rule, the DSL
+  takes bare stock names). Only the *-strict rulesets name rules the artifacts do not define.
 
 rules:
   design:
-  - Rules are Java classes, never inline XPath — XPath rules escape every quality gate the build applies
-  - Shipped resources must reference nothing outside this artifact
+  - Rules are Java classes, never inline XPath and never Groovy rule scripts — either escapes every quality gate the build applies
+  - Shipped resources must reference nothing outside their own artifact, except the *-strict rulesets
   - Prefer mermaid diagrams for round/ordering flows
   tasks:
   - Always add a final task to run `./gradlew check` to verify everything. NEVER continue if there are violations!

@@ -1,8 +1,8 @@
 # These settings are synced to GitHub by https://probot.github.io/apps/settings/
 repository:
-  name: pmd-rules
-  description: Custom PMD 7 rules, published as a ruleset any project can put on its pmd configuration
-  topics: java, pmd, static-analysis, pmd-rules, code-quality
+  name: lint-rules
+  description: Custom PMD 7 and CodeNarc 4 rules, published as rulesets any project can put on its pmd or codenarc configuration
+  topics: java, groovy, pmd, codenarc, spock, static-analysis, pmd-rules, codenarc-rules, code-quality
   private: false
   has_issues: true
   has_projects: false

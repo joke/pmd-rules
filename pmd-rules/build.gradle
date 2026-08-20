@@ -1,0 +1,63 @@
+plugins {
+    id 'java'
+    id 'maven-publish'
+    id 'conventions'
+}
+
+description = 'Custom PMD 7 rules, published as a ruleset any project can put on its pmd configuration'
+
+// A POM-only publication at the coordinate this artifact used to occupy, carrying nothing but a
+// forwarding address. Maven and Gradle both surface a relocation as a warning naming the new
+// coordinate, so a consumer who never reads a changelog is still told.
+//
+// This is published once, with the first release after the move, and then removed - retaining it
+// would emit a fresh relocation POM at every later version under a coordinate nobody is pinned to.
+publishing {
+    publications {
+        relocation(MavenPublication) {
+            groupId = 'io.github.joke.pmd'
+            artifactId = 'rules'
+            pom {
+                name = 'rules'
+                description = project.description
+                distributionManagement {
+                    relocation {
+                        groupId = 'io.github.joke.lint'
+                        artifactId = 'pmd-rules'
+                        message = 'groupId and artifactId changed: this project now publishes PMD and CodeNarc rules as separate artifacts under io.github.joke.lint.'
+                    }
+                }
+            }
+        }
+    }
+}
+
+dependencies {
+    annotationProcessor platform(project(':dependencies'))
+    annotationProcessor 'io.github.joke.jspecify:processor'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    pmd project(':pmd-rules')
+
+    compileOnly platform(project(':dependencies'))
+    compileOnly 'net.sourceforge.pmd:pmd-core'
+    compileOnly 'net.sourceforge.pmd:pmd-java'
+    compileOnly 'org.jetbrains:annotations'
+    compileOnly 'org.jspecify:jspecify'
+    compileOnly 'org.projectlombok:lombok'
+
+    testImplementation platform(project(':dependencies'))
+    testImplementation 'net.sourceforge.pmd:pmd-core'
+    testImplementation 'net.sourceforge.pmd:pmd-java'
+    testImplementation 'net.sourceforge.pmd:pmd-test'
+    testImplementation 'org.assertj:assertj-core'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testImplementation 'org.mockito:mockito-core'
+
+    testCompileOnly 'org.jetbrains:annotations'
+
+    testRuntimeOnly platform(project(':dependencies'))
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+
+}

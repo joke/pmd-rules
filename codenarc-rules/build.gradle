@@ -1,0 +1,34 @@
+plugins {
+    id 'groovy'
+    id 'maven-publish'
+    id 'conventions'
+}
+
+description = 'Custom CodeNarc rules for Spock specifications, published as a ruleset any project can put on its codenarc configuration'
+
+dependencies {
+    annotationProcessor platform(project(':dependencies'))
+    annotationProcessor 'io.github.joke.jspecify:processor'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    codenarc project(':codenarc-rules')
+
+    pmd project(':pmd-rules')
+
+    compileOnly platform(project(':dependencies'))
+    // CodeNarc's POM puts Groovy at runtime scope, so the Groovy AST this rule code visits is not
+    // on the compile classpath without declaring Groovy here as well.
+    compileOnly 'org.apache.groovy:groovy'
+    compileOnly 'org.codenarc:CodeNarc'
+    compileOnly 'org.jetbrains:annotations'
+    compileOnly 'org.jspecify:jspecify'
+    compileOnly 'org.projectlombok:lombok'
+
+    testImplementation platform(project(':dependencies'))
+    testImplementation 'org.apache.groovy:groovy'
+    testImplementation 'org.codenarc:CodeNarc'
+    testImplementation 'org.spockframework:spock-core'
+
+    testRuntimeOnly platform(project(':dependencies'))
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}

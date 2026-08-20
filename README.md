@@ -1,13 +1,24 @@
-# pmd-rules
+# lint-rules
 
-Custom [PMD 7](https://pmd.github.io/) rules for Java, implemented as Java rule classes and published
-as a ruleset any project can put on its `pmd` configuration.
+House static-analysis rules, published as two artifacts:
 
-## Use it
+| artifact | tool | analyses |
+|---|---|---|
+| `io.github.joke.lint:pmd-rules` | [PMD 7](https://pmd.github.io/) | Java |
+| `io.github.joke.lint:codenarc-rules` | [CodeNarc 4](https://codenarc.org/) | Groovy, aimed at Spock specifications |
+
+Both are implemented as Java rule classes and shipped as rulesets you reference from your build. They
+version independently and are consumed independently — there is no reason to take both.
+
+> **Moving from `io.github.joke.pmd:rules`?** It is now `io.github.joke.lint:pmd-rules`. The ruleset
+> resource paths are unchanged, so only the dependency coordinate moves. The old coordinate carries a
+> relocation POM, so Maven and Gradle will tell you the same thing.
+
+## Use the PMD rules
 
 ```groovy
 dependencies {
-    pmd 'io.github.joke.pmd:rules:<version>'
+    pmd 'io.github.joke.lint:pmd-rules:<version>'
 }
 
 pmd {
@@ -54,6 +65,67 @@ ruleset file that references it and excludes from it, and pointing `ruleSetFiles
 </rule>
 ```
 
+## Use the CodeNarc rules
+
+```groovy
+dependencies {
+    codenarc 'io.github.joke.lint:codenarc-rules:<version>'
+}
+
+codenarc {
+    config = resources.text.fromString("ruleset { ruleset('rulesets/groovy/joke-strict.groovy') }")
+}
+```
+
+That is the whole analysis this project runs on its own Groovy: the curated selection of CodeNarc
+stock rules, plus every rule this artifact defines. It needs **CodeNarc 4.0.0 or later** — see
+[CodeNarc versions](#codenarc-versions).
+
+**Why the stub?** Gradle cannot take a classpath ruleset. Its `CodeNarcInvoker` passes the ruleset to
+CodeNarc's Ant task as `"file:" + config`, and `CodeNarcActionParameters` exposes no classpath
+option — so unlike PMD's `ruleSets`, you cannot simply name `rulesets/groovy/joke-strict.groovy`.
+CodeNarc's *own* loader does resolve nested `ruleset(...)` references from the classpath, so the
+one-line stub above is the whole indirection. The stub is a pointer, not a policy: the composition
+lives in the artifact, and you get its updates by bumping the dependency.
+
+The outer `ruleset { }` is required. CodeNarc's `RuleSetBuilder` exposes only `ruleset(Closure)` at
+the top level; `ruleset(String)` is a method on the closure's delegate, so a bare
+`ruleset('rulesets/...')` fails at analysis time.
+
+To take only the rules from here and keep your own composition, reference the convenience ruleset
+instead:
+
+```groovy
+codenarc {
+    config = resources.text.fromString("ruleset { ruleset('rulesets/groovy/joke.groovy') }")
+}
+```
+
+`rulesets/groovy/joke.groovy` contains every rule this artifact defines and names no CodeNarc stock
+rule, so it resolves identically under every supported CodeNarc.
+
+## CodeNarc versions
+
+The rules are compiled against **CodeNarc 4.0.0** and run on any later 4.x.
+
+CodeNarc's compatibility surface is two-dimensional in a way PMD's is not: the artifact coordinate
+itself encodes the Groovy line.
+
+| line | coordinate | supported |
+|---|---|---|
+| Groovy 3 | `org.codenarc:CodeNarc:3.x` | no |
+| Groovy 4 | `org.codenarc:CodeNarc:3.x-groovy-4.0` | no |
+| Groovy 5 | `org.codenarc:CodeNarc:4.0.0` and later | **yes** |
+
+The rule classes touch only `AbstractAstVisitorRule`, `AbstractAstVisitor`, `Violation`,
+`SourceCode` and `org.codehaus.groovy.ast.*`, so they would plausibly run on the older lines too —
+but nothing tests that, and a plausible claim is not a supported one. The Groovy 4 line additionally
+cannot carry the shipped composition at its own oldest release: `joke-strict.groovy` names
+`SpockMissingAssert`, which CodeNarc only added in 3.3.0.
+
+The published POM declares no dependencies. You supply CodeNarc yourself, on Gradle's `codenarc`
+configuration, at a version you choose.
+
 ## PMD versions
 
 The rules are compiled against **PMD 7.0.0** and run on any later PMD 7.x. Compiling against the
@@ -94,7 +166,7 @@ The jar itself is Java 11 bytecode, so the JVM running PMD must be Java 11 or la
 nothing about the source you analyse: analysing Java 8 code is a property of your PMD language
 version, not of this artifact.
 
-## Rules
+## PMD rules
 
 ### UseVarForLocalVariables
 
@@ -541,30 +613,83 @@ private static void process(…)                           // continues down the
 `UseStaticImports` and `UseTypeImports` sit outside that chain: they report independently and each
 violation is one import line.
 
+## CodeNarc rules
+
+### AvoidUnrollAnnotation
+
+Reports `@Unroll` on a specification class or a feature method.
+
+Spock 2 unrolls every data-driven feature by default, so the annotation changes nothing. Left in
+place it reads as though it were switching a behaviour on, which sends a reader looking for the
+un-annotated features that supposedly behave differently.
+
+```groovy
+class ExampleSpec extends Specification {
+
+    @Unroll                                    // violation
+    def 'adds #a and #b'() {
+        expect:
+        a + b == sum
+
+        where:
+        a | b || sum
+        1 | 2 || 3
+    }
+
+    def 'adds #a and #b'() {                   // no violation: already unrolled
+        expect:
+        a + b == sum
+
+        where:
+        a | b || sum
+        1 | 2 || 3
+    }
+}
+```
+
+The annotation is matched on the name as written — both `@Unroll` and `@spock.lang.Unroll` — rather
+than resolved to a type. CodeNarc analyses source without a compile classpath, so a rule that
+resolved the annotation would report nothing whenever that classpath was incomplete. The cost is
+that a deliberately misleading `Unroll` from another package is reported too, which is the cheaper
+failure.
+
+The rest of the house Spock conventions land one rule at a time.
+
 ## Build
 
 ```
 ./gradlew check
 ```
 
-Runs the unit tests, the integration tests at the PMD compile floor, Spotless, PMD, Error Prone with
-NullAway, and mutation testing at 100% mutation, coverage and test strength.
+Runs the unit tests, the integration tests at each tool's compile floor, Spotless, PMD, CodeNarc,
+Error Prone with NullAway, and mutation testing at 100% mutation, coverage and test strength.
+
+Groovy source is deliberately **not** formatted: Spotless's Groovy support is `greclipse`, which
+reformats Spock's labelled-block layout badly enough to fight the specifications it would be tidying.
+CodeNarc carries Groovy style instead.
 
 ### This project runs its own rules on itself
 
-`rules/build.gradle` puts `project(':rules')` on the `pmd` configuration and the convention plugin
-sets `ruleSets = ['rulesets/java/joke-strict.xml']`, so `pmdMain` and `pmdTest` analyse this
-repository with the artifact this repository builds — through the same published resource a consumer
-references, resolved off the analysis classpath the same way. There is no ruleset file in this
-repository; the composition under test is the shipped one. It is exactly the wiring the
-[Use it](#use-it) section describes, and it means a new rule has to leave this repository clean as
-part of the change that adds it.
+Both artifacts analyse this repository with the artifacts this repository builds, through the same
+published resources a consumer references, resolved off the analysis classpath the same way:
+
+| module | declares | task | analyses |
+|---|---|---|---|
+| `pmd-rules` | `pmd project(':pmd-rules')` | `pmdMain`, `pmdTest` | its own Java rule classes |
+| `codenarc-rules` | `pmd project(':pmd-rules')` | `pmdMain` | its Java rule classes |
+| `codenarc-rules` | `codenarc project(':codenarc-rules')` | `codenarcTest` | its own Spock specifications |
+
+There is no ruleset file in this repository; both compositions under test are the shipped ones. A new
+rule therefore has to leave this repository clean as part of the change that adds it.
+
+The CodeNarc rules are Spock-focused and this module's tests *are* Spock specifications, which is
+what makes that last row real dogfooding rather than a unit test wearing a costume.
 
 The consequence is that **a broken rule breaks the build that produces it**, and the repair is to
 edit the rule that is currently failing. To build past it:
 
 ```
-./gradlew check -x pmdMain -x pmdTest
+./gradlew check -x pmdMain -x pmdTest -x codenarcTest
 ```
 
 ### How the supported PMD range is covered
@@ -591,7 +716,7 @@ extend and no guard to satisfy.
 
 ### Rule test data stays in XML
 
-The `pmd-test` descriptors under `rules/src/test/resources` deliberately contain violating code, and
+The `pmd-test` descriptors under `pmd-rules/src/test/resources` deliberately contain violating code, and
 the examples in `category/java/joke.xml` do too. Both are invisible to `pmdMain` and `pmdTest` only
 because they are XML. Do not move rule fixtures into `.java` files — the build would flag its own
 test data, and excluding the fixture path to fix it would silently exclude whatever moved there

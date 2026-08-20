@@ -16,7 +16,8 @@ nmcpSettings {
     }
 }
 
-rootProject.name = 'pmd-rules'
+rootProject.name = 'lint-rules'
 
 include 'dependencies'
-include 'rules'
+include 'pmd-rules'
+include 'codenarc-rules'

@@ -25,6 +25,24 @@ dependencies {
         api 'net.sourceforge.pmd:pmd-core:7.0.0'
         api 'net.sourceforge.pmd:pmd-java:7.0.0'
         api 'net.sourceforge.pmd:pmd-test:7.0.0'
+
+        // The supported CodeNarc floor, on the Groovy 5 line. Same reasoning as the PMD floor:
+        // rules compiled against the floor run on newer CodeNarc, not the reverse. Raising this is
+        // a decision to be recorded in a change, never a side effect of a dependency update.
+        //
+        // 4.0.0 is both the floor and the oldest CodeNarc on this line - the Groovy 5 line begins
+        // there, and the artifact suffix that marked the Groovy 3 and Groovy 4 lines is dropped.
+        //
+        // Groovy is declared alongside it because CodeNarc's POM puts every Groovy module at
+        // runtime scope, so CodeNarc alone does not put org.codehaus.groovy.ast.* on the compile
+        // classpath and a Java rule extending AbstractAstVisitor will not compile.
+        //
+        // These three move together. CodeNarc parses .groovy source with its own embedded Groovy,
+        // so a specification written in syntax newer than the analysing CodeNarc's parser fails
+        // analysis while compiling perfectly.
+        api 'org.codenarc:CodeNarc:4.0.0'
+        api 'org.apache.groovy:groovy:5.0.8'
+        api 'org.spockframework:spock-core:2.4-groovy-5.0'
     }
 
 }

@@ -1,7 +1,12 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
   "packages": {
-    ".": {
+    "codenarc-rules": {
+      "component": "codenarc-rules",
+      "release-type": "simple"
+    },
+    "pmd-rules": {
+      "component": "pmd-rules",
       "release-type": "simple"
     }
   }
